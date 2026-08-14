@@ -32,17 +32,8 @@ Minizoom is a self-hosted, lightweight video conferencing application designed f
    LIVEKIT_API_KEY=your_api_key
    LIVEKIT_API_SECRET=your_api_secret
    LIVEKIT_URL=wss://your-livekit-server
-
-   # SMTP Notification Settings
-   SMTP_SERVER=smtp.example.com
-   SMTP_PORT=587
-   SMTP_USERNAME=user@example.com
-   SMTP_PASSWORD=your_password
-   SMTP_FROM=noreply@example.com
-
-   # Discord Notification Settings
-   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
    ```
+   *(Note: SMTP and Discord Webhook configurations can be set directly from the Superadmin Dashboard UI in the Settings tab!)*
 
 3. Build and start the containers:
    ```bash

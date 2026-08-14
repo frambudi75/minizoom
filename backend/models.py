@@ -27,3 +27,14 @@ class Meeting(Base):
     status = Column(String, default="scheduled") # 'scheduled', 'active', 'finished'
 
     host = relationship("User", back_populates="meetings")
+
+class SystemSettings(Base):
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    smtp_server = Column(String, default="")
+    smtp_port = Column(Integer, default=587)
+    smtp_username = Column(String, default="")
+    smtp_password = Column(String, default="")
+    smtp_from = Column(String, default="noreply@minizoom.local")
+    discord_webhook_url = Column(String, default="")

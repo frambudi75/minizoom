@@ -9,8 +9,21 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "noreply@minizoom.local")
 
-def send_new_user_notification(admin_emails: list, new_user_name: str, new_user_email: str):
-    if not SMTP_SERVER or not SMTP_USERNAME or not SMTP_PASSWORD:
+def send_new_user_notification(admin_emails: list, new_user_name: str, new_user_email: str, config: dict = None):
+    # Fallback to env variables if config not provided or incomplete
+    smtp_server = config.get("smtp_server") if config else None
+    smtp_port = config.get("smtp_port") if config else None
+    smtp_username = config.get("smtp_username") if config else None
+    smtp_password = config.get("smtp_password") if config else None
+    smtp_from = config.get("smtp_from") if config else None
+
+    server_host = smtp_server or SMTP_SERVER
+    port = int(smtp_port) if smtp_port else SMTP_PORT
+    username = smtp_username or SMTP_USERNAME
+    password = smtp_password or SMTP_PASSWORD
+    sender = smtp_from or SMTP_FROM
+
+    if not server_host or not username or not password:
         print("SMTP is not configured. Skipping email notification.")
         return
 
@@ -37,18 +50,18 @@ def send_new_user_notification(admin_emails: list, new_user_name: str, new_user_
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Minizoom <{SMTP_FROM}>"
+    msg["From"] = f"Minizoom <{sender}>"
     msg["To"] = ", ".join(admin_emails)
 
     part = MIMEText(html, "html")
     msg.attach(part)
 
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server = smtplib.SMTP(server_host, port)
         server.ehlo()
         server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(SMTP_FROM, admin_emails, msg.as_string())
+        server.login(username, password)
+        server.sendmail(sender, admin_emails, msg.as_string())
         server.quit()
         print(f"Notification email sent successfully to {len(admin_emails)} admins.")
     except Exception as e:

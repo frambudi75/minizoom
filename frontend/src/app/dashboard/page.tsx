@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Video, Users, CheckCircle, Plus, LogOut, Calendar, Clock, LayoutDashboard, Trash2 } from 'lucide-react';
+import { Video, Users, CheckCircle, Plus, LogOut, Calendar, Clock, LayoutDashboard, Trash2, Settings } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -16,6 +16,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [scheduleData, setScheduleData] = useState({ title: '', scheduled_at: '' });
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  const [settings, setSettings] = useState({
+    smtp_server: '', smtp_port: 587, smtp_username: '', smtp_password: '', smtp_from: '', discord_webhook_url: ''
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,6 +42,11 @@ export default function Dashboard() {
 
           const resAllUsers = await fetch('/api/admin/users/all', { headers: { Authorization: `Bearer ${token}` } });
           setAllUsers(await resAllUsers.json());
+
+          const resSettings = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
+          if(resSettings.ok) {
+              setSettings(await resSettings.json());
+          }
         }
 
         const resMeetings = await fetch('/api/meetings', { headers: { Authorization: `Bearer ${token}` } });
@@ -67,6 +77,19 @@ export default function Dashboard() {
     await fetch(`/api/admin/users/role/${userId}?role=${newRole}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
     
     setAllUsers(allUsers.map(u => u.id === userId ? { ...u, role: newRole } : u));
+  };
+
+  const saveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    const token = localStorage.getItem('token');
+    await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings)
+    });
+    setSavingSettings(false);
+    alert('Settings saved successfully!');
   };
 
   const createInstantMeeting = async () => {
@@ -138,9 +161,14 @@ export default function Dashboard() {
                 <Calendar className="w-5 h-5" /> Schedule
             </button>
             {user?.role === 'superadmin' && (
+                <>
                 <button onClick={() => setActiveTab('users')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'users' ? 'bg-purple-600/10 text-purple-400 font-medium' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
                     <Users className="w-5 h-5" /> Users
                 </button>
+                <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-orange-600/10 text-orange-400 font-medium' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
+                    <Settings className="w-5 h-5" /> Settings
+                </button>
+                </>
             )}
         </nav>
         <div className="p-4 border-t border-slate-800">
@@ -349,6 +377,62 @@ export default function Dashboard() {
                                 </table>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'settings' && user?.role === 'superadmin' && (
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                            <h1 className="text-2xl font-bold flex items-center gap-3">
+                                <Settings className="w-6 h-6 text-orange-500" /> System Settings
+                            </h1>
+                        </div>
+
+                        <form onSubmit={saveSettings} className="space-y-6">
+                            <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                                <h2 className="text-lg font-semibold text-slate-200 mb-6 border-b border-slate-800 pb-4">Email Notifications (SMTP)</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium text-slate-300 ml-1">SMTP Server</label>
+                                        <input type="text" className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100" 
+                                            placeholder="smtp.example.com" value={settings.smtp_server} onChange={e => setSettings({...settings, smtp_server: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium text-slate-300 ml-1">SMTP Port</label>
+                                        <input type="number" className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100" 
+                                            placeholder="587" value={settings.smtp_port} onChange={e => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium text-slate-300 ml-1">SMTP Username</label>
+                                        <input type="text" className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100" 
+                                            placeholder="user@example.com" value={settings.smtp_username} onChange={e => setSettings({...settings, smtp_username: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium text-slate-300 ml-1">SMTP Password</label>
+                                        <input type="password" className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100" 
+                                            placeholder="********" value={settings.smtp_password} onChange={e => setSettings({...settings, smtp_password: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <label className="text-sm font-medium text-slate-300 ml-1">Sender Email (From)</label>
+                                        <input type="email" className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100" 
+                                            placeholder="noreply@minizoom.local" value={settings.smtp_from} onChange={e => setSettings({...settings, smtp_from: e.target.value})} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                                <h2 className="text-lg font-semibold text-slate-200 mb-6 border-b border-slate-800 pb-4">Discord Integration</h2>
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-slate-300 ml-1">Webhook URL</label>
+                                    <input type="text" className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100" 
+                                        placeholder="https://discord.com/api/webhooks/..." value={settings.discord_webhook_url} onChange={e => setSettings({...settings, discord_webhook_url: e.target.value})} />
+                                </div>
+                            </div>
+
+                            <button type="submit" disabled={savingSettings} className="w-full py-4 bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 text-white rounded-2xl font-semibold transition-all shadow-lg active:scale-95">
+                                {savingSettings ? 'Saving...' : 'Save Settings'}
+                            </button>
+                        </form>
                     </div>
                 )}
             </div>

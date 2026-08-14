@@ -53,3 +53,21 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+
+class SystemSettingsBase(BaseModel):
+    smtp_server: Optional[str] = ""
+    smtp_port: Optional[int] = 587
+    smtp_username: Optional[str] = ""
+    smtp_password: Optional[str] = ""
+    smtp_from: Optional[str] = "noreply@minizoom.local"
+    discord_webhook_url: Optional[str] = ""
+
+class SystemSettingsCreate(SystemSettingsBase):
+    pass
+
+class SystemSettingsResponse(SystemSettingsBase):
+    id: int
+
+    class Config:
+        from_attributes = True

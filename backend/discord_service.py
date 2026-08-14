@@ -4,8 +4,11 @@ import urllib.request
 
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
 
-def send_discord_notification(new_user_name: str, new_user_email: str):
-    if not DISCORD_WEBHOOK_URL:
+def send_discord_notification(new_user_name: str, new_user_email: str, config: dict = None):
+    webhook_url = config.get("discord_webhook_url") if config else None
+    url = webhook_url or DISCORD_WEBHOOK_URL
+
+    if not url:
         return
 
     data = {
@@ -34,7 +37,7 @@ def send_discord_notification(new_user_name: str, new_user_email: str):
     }
     
     req = urllib.request.Request(
-        DISCORD_WEBHOOK_URL,
+        url,
         data=json.dumps(data).encode('utf-8'),
         headers={'User-Agent': 'MinizoomBot/1.0', 'Content-Type': 'application/json'},
         method='POST'

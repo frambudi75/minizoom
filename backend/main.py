@@ -73,14 +73,26 @@ def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Se
 
     # Send notifications in background
     if db_user.role != "superadmin":
+        settings = db.query(models.SystemSettings).first()
+        settings_dict = {}
+        if settings:
+            settings_dict = {
+                "smtp_server": settings.smtp_server,
+                "smtp_port": settings.smtp_port,
+                "smtp_username": settings.smtp_username,
+                "smtp_password": settings.smtp_password,
+                "smtp_from": settings.smtp_from,
+                "discord_webhook_url": settings.discord_webhook_url
+            }
+
         # Email Notification
         admins = db.query(models.User).filter(models.User.role == "superadmin").all()
         admin_emails = [admin.email for admin in admins]
         if admin_emails:
-            background_tasks.add_task(email_service.send_new_user_notification, admin_emails, user.name, user.email)
+            background_tasks.add_task(email_service.send_new_user_notification, admin_emails, user.name, user.email, settings_dict)
             
         # Discord Notification
-        background_tasks.add_task(discord_service.send_discord_notification, user.name, user.email)
+        background_tasks.add_task(discord_service.send_discord_notification, user.name, user.email, settings_dict)
 
     return db_user
 
@@ -132,6 +144,34 @@ def change_user_role(user_id: int, role: str, current_user: models.User = Depend
     db.commit()
     db.refresh(user)
     return user
+
+@app.get("/api/admin/settings", response_model=schemas.SystemSettingsResponse)
+def get_settings(current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    settings = db.query(models.SystemSettings).first()
+    if not settings:
+        settings = models.SystemSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+@app.post("/api/admin/settings", response_model=schemas.SystemSettingsResponse)
+def update_settings(settings_in: schemas.SystemSettingsCreate, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    settings = db.query(models.SystemSettings).first()
+    if not settings:
+        settings = models.SystemSettings()
+        db.add(settings)
+
+    settings.smtp_server = settings_in.smtp_server
+    settings.smtp_port = settings_in.smtp_port
+    settings.smtp_username = settings_in.smtp_username
+    settings.smtp_password = settings_in.smtp_password
+    settings.smtp_from = settings_in.smtp_from
+    settings.discord_webhook_url = settings_in.discord_webhook_url
+
+    db.commit()
+    db.refresh(settings)
+    return settings
 
 @app.get("/api/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_active_user)):
