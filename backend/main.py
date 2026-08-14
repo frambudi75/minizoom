@@ -1,0 +1,165 @@
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from datetime import timedelta
+import models, schemas, auth
+from database import engine, get_db
+import os
+import uuid
+from livekit import api
+
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Minizoom API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = auth.jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = schemas.TokenData(email=email)
+    except auth.InvalidTokenError:
+        raise credentials_exception
+    user = db.query(models.User).filter(models.User.email == token_data.email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+def get_current_active_user(current_user: models.User = Depends(get_current_user)):
+    if current_user.status != "approved":
+        raise HTTPException(status_code=400, detail="User account is pending approval")
+    return current_user
+
+def get_current_superadmin(current_user: models.User = Depends(get_current_active_user)):
+    if current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not enough privileges")
+    return current_user
+
+@app.post("/api/register", response_model=schemas.UserResponse)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    # Auto-approve and make superadmin if it's the first user
+    if db.query(models.User).count() == 0:
+        db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password, role="superadmin", status="approved")
+    else:
+        db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password)
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/api/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    if user.status != "approved":
+        raise HTTPException(status_code=400, detail="Account pending approval")
+    
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/api/admin/users/pending", response_model=list[schemas.UserResponse])
+def get_pending_users(current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    users = db.query(models.User).filter(models.User.status == "pending").all()
+    return users
+
+@app.post("/api/admin/users/approve/{user_id}", response_model=schemas.UserResponse)
+def approve_user(user_id: int, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.status = "approved"
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.get("/api/me", response_model=schemas.UserResponse)
+def read_users_me(current_user: models.User = Depends(get_current_active_user)):
+    return current_user
+
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
+
+@app.post("/api/meetings/instant", response_model=schemas.MeetingResponse)
+def create_instant_meeting(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    room_id = str(uuid.uuid4())
+    meeting = models.Meeting(
+        title=f"Meeting of {current_user.name}",
+        room_id=room_id,
+        host_id=current_user.id,
+        status="active"
+    )
+    db.add(meeting)
+    db.commit()
+    db.refresh(meeting)
+    return meeting
+
+@app.get("/api/meetings", response_model=list[schemas.MeetingResponse])
+def get_meetings(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meetings = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id).order_by(models.Meeting.scheduled_at.desc()).all()
+    return meetings
+
+@app.post("/api/meetings/schedule", response_model=schemas.MeetingResponse)
+def schedule_meeting(meeting: schemas.MeetingCreate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    room_id = str(uuid.uuid4())
+    db_meeting = models.Meeting(
+        title=meeting.title,
+        room_id=room_id,
+        host_id=current_user.id,
+        scheduled_at=meeting.scheduled_at,
+        status="scheduled"
+    )
+    db.add(db_meeting)
+    db.commit()
+    db.refresh(db_meeting)
+    return db_meeting
+
+@app.delete("/api/meetings/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_meeting(room_id: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id, models.Meeting.host_id == current_user.id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found or you don't have permission")
+    db.delete(meeting)
+    db.commit()
+    return None
+
+@app.get("/api/meetings/{room_id}/token")
+def get_livekit_token(room_id: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    
+    token = api.AccessToken("APIWJqnkC7Ntahy", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA") \
+        .with_identity(str(current_user.id)) \
+        .with_name(current_user.name) \
+        .with_grants(api.VideoGrants(
+            room_join=True,
+            room=room_id,
+        ))
+    return {"token": token.to_jwt()}
