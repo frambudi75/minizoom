@@ -5,9 +5,130 @@ import {
   LiveKitRoom,
   VideoConference,
   RoomAudioRenderer,
+  useParticipants,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { User, Building2, ArrowRight } from 'lucide-react';
+import { User, Building2, ArrowRight, MicOff, VideoOff, UserMinus, Users } from 'lucide-react';
+
+// Custom Participant Sidebar Component
+function ParticipantSidebar({ roomId }: { roomId: string }) {
+    const participants = useParticipants();
+    const { localParticipant } = useLocalParticipant();
+    
+    const [isHost, setIsHost] = useState(false);
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload?.video?.roomAdmin) {
+                    setIsHost(true);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }, []);
+
+    const handleMute = async (identity: string) => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            await fetch(`/api/meetings/${roomId}/mute/${identity}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleKick = async (identity: string) => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            await fetch(`/api/meetings/${roomId}/kick/${identity}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleVideoOff = async (identity: string) => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            await fetch(`/api/meetings/${roomId}/video-off/${identity}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    return (
+        <div className="w-80 bg-[#1e1e1e] border-l border-slate-800 p-4 flex flex-col h-full overflow-y-auto z-10 shrink-0">
+            <h3 className="text-slate-100 font-semibold mb-6 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-400" /> 
+                Participants ({participants.length})
+            </h3>
+            <div className="flex flex-col gap-3">
+                {participants.map(p => (
+                    <div key={p.identity} className="flex flex-col gap-2 bg-[#2d2d2d] p-3 rounded-xl border border-slate-700/50">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-200 truncate">
+                                {p.name || p.identity}
+                                {p.isLocal && " (You)"}
+                            </span>
+                            <div className="flex gap-1">
+                                {!p.isMicrophoneEnabled && (
+                                    <span title="Mic is muted" className="flex items-center">
+                                        <MicOff className="w-4 h-4 text-red-400 shrink-0" />
+                                    </span>
+                                )}
+                                {!p.isCameraEnabled && (
+                                    <span title="Camera is off" className="flex items-center">
+                                        <VideoOff className="w-4 h-4 text-slate-500 shrink-0" />
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        {isHost && !p.isLocal && (
+                            <div className="flex gap-2 mt-1">
+                                <button 
+                                    onClick={() => handleMute(p.identity)} 
+                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-1.5 rounded-md transition-colors"
+                                    title="Mute Microphone"
+                                >
+                                    <MicOff className="w-3 h-3" /> Mute
+                                </button>
+                                <button 
+                                    onClick={() => handleVideoOff(p.identity)} 
+                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 px-2 py-1.5 rounded-md transition-colors"
+                                    title="Turn Off Video"
+                                >
+                                    <VideoOff className="w-3 h-3" /> Stop Vid
+                                </button>
+                                <button 
+                                    onClick={() => handleKick(p.identity)} 
+                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 px-2 py-1.5 rounded-md transition-colors"
+                                    title="Kick Participant"
+                                >
+                                    <UserMinus className="w-3 h-3" /> Kick
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 
 export default function Room() {
   const params = useParams();
@@ -169,9 +290,12 @@ export default function Room() {
           }
       }}
       data-lk-theme="default"
-      style={{ height: '100vh', backgroundColor: '#0f172a' }}
+      style={{ height: '100vh', backgroundColor: '#0f172a', display: 'flex', overflow: 'hidden' }}
     >
-      <VideoConference />
+      <div className="flex-1 overflow-hidden h-full">
+        <VideoConference />
+      </div>
+      <ParticipantSidebar roomId={params.id as string} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );

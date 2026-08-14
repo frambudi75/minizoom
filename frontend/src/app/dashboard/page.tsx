@@ -8,6 +8,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [meetingLoading, setMeetingLoading] = useState(false);
@@ -33,6 +34,9 @@ export default function Dashboard() {
         if (userData.role === 'superadmin') {
           const resAdmin = await fetch('/api/admin/users/pending', { headers: { Authorization: `Bearer ${token}` } });
           setPendingUsers(await resAdmin.json());
+
+          const resAllUsers = await fetch('/api/admin/users/all', { headers: { Authorization: `Bearer ${token}` } });
+          setAllUsers(await resAllUsers.json());
         }
 
         const resMeetings = await fetch('/api/meetings', { headers: { Authorization: `Bearer ${token}` } });
@@ -52,6 +56,17 @@ export default function Dashboard() {
     const token = localStorage.getItem('token');
     await fetch(`/api/admin/users/approve/${userId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
     setPendingUsers(pendingUsers.filter(u => u.id !== userId));
+    
+    // update in all users list
+    setAllUsers(allUsers.map(u => u.id === userId ? { ...u, status: 'approved' } : u));
+  };
+
+  const toggleUserRole = async (userId: number, currentRole: string) => {
+    const token = localStorage.getItem('token');
+    const newRole = currentRole === 'superadmin' ? 'user' : 'superadmin';
+    await fetch(`/api/admin/users/role/${userId}?role=${newRole}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    
+    setAllUsers(allUsers.map(u => u.id === userId ? { ...u, role: newRole } : u));
   };
 
   const createInstantMeeting = async () => {
@@ -122,6 +137,11 @@ export default function Dashboard() {
             <button onClick={() => setActiveTab('schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'schedule' ? 'bg-blue-600/10 text-blue-400 font-medium' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
                 <Calendar className="w-5 h-5" /> Schedule
             </button>
+            {user?.role === 'superadmin' && (
+                <button onClick={() => setActiveTab('users')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'users' ? 'bg-purple-600/10 text-purple-400 font-medium' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
+                    <Users className="w-5 h-5" /> Users
+                </button>
+            )}
         </nav>
         <div className="p-4 border-t border-slate-800">
             <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-xl mb-4">
@@ -272,6 +292,63 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                )}
+                {activeTab === 'users' && user?.role === 'superadmin' && (
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                            <h1 className="text-2xl font-bold flex items-center gap-3">
+                                <Users className="w-6 h-6 text-purple-500" /> User Management
+                            </h1>
+                        </div>
+
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 shadow-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-slate-800 text-slate-400 text-sm">
+                                            <th className="pb-3 px-4 font-medium">Name</th>
+                                            <th className="pb-3 px-4 font-medium">Email</th>
+                                            <th className="pb-3 px-4 font-medium">Status</th>
+                                            <th className="pb-3 px-4 font-medium">Role</th>
+                                            <th className="pb-3 px-4 text-right font-medium">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800/50">
+                                        {allUsers.map((u: any) => (
+                                            <tr key={u.id} className="hover:bg-slate-800/30 transition-colors group">
+                                                <td className="py-4 px-4 text-slate-200 font-medium">{u.name}</td>
+                                                <td className="py-4 px-4 text-slate-400 text-sm">{u.email}</td>
+                                                <td className="py-4 px-4">
+                                                    {u.status === 'approved' ? (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">Pending</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-4 px-4">
+                                                    {u.role === 'superadmin' ? (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">Superadmin</span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">User</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-4 px-4 text-right">
+                                                    {u.id !== user.id && (
+                                                        <button 
+                                                            onClick={() => toggleUserRole(u.id, u.role)}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${u.role === 'superadmin' ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-purple-600/20 text-purple-400 border-purple-500/30 hover:bg-purple-600/30'}`}
+                                                        >
+                                                            {u.role === 'superadmin' ? 'Demote to User' : 'Make Admin'}
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

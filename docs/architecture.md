@@ -18,7 +18,8 @@ Minizoom dibangun menggunakan pola arsitektur Client-Server yang sekarang dileng
     *   *Database ORM*: **SQLAlchemy** (memudahkan query dan manajemen skema database).
     *   *Database Engine*: **SQLite** (untuk versi awal/pengembangan lokal), bisa di-*upgrade* ke **PostgreSQL** untuk *production*.
     *   *Autentikasi*: **PyJWT** & **Passlib** untuk *hashing password* dan sesi *login*.
-*   **Media Server**: **LiveKit (Open Source SFU)**
+    *   *Background Tasks*: FastAPI BackgroundTasks untuk mengirim email SMTP dan webhook Discord.
+*   **Media Server**: **LiveKit Cloud** (atau Open Source SFU)
     *   Mengatur seluruh *traffic* media secara mandiri agar Backend tidak kelebihan beban.
 *   **Frontend**: **Next.js (React) + LiveKit React Components**
 
@@ -26,6 +27,7 @@ Minizoom dibangun menggunakan pola arsitektur Client-Server yang sekarang dileng
 
 1.  **Pendaftaran & Approval**:
     *   User -> Register (Status: Pending) -> Disimpan ke Database.
+    *   Backend menjalankan *Background Task* untuk mengirim notifikasi ke Discord dan SMTP Email ke semua Superadmin.
     *   Superadmin -> Login -> Melihat daftar akun Pending -> Klik Approve.
     *   User (Approved) -> Bisa Login menggunakan JWT Token.
 2.  **Dashboard & Penjadwalan**:

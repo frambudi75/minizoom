@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -8,6 +8,8 @@ from database import engine, get_db
 import os
 import uuid
 from livekit import api
+import email_service
+import discord_service
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -53,7 +55,7 @@ def get_current_superadmin(current_user: models.User = Depends(get_current_activ
     return current_user
 
 @app.post("/api/register", response_model=schemas.UserResponse)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -68,6 +70,18 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Send notifications in background
+    if db_user.role != "superadmin":
+        # Email Notification
+        admins = db.query(models.User).filter(models.User.role == "superadmin").all()
+        admin_emails = [admin.email for admin in admins]
+        if admin_emails:
+            background_tasks.add_task(email_service.send_new_user_notification, admin_emails, user.name, user.email)
+            
+        # Discord Notification
+        background_tasks.add_task(discord_service.send_discord_notification, user.name, user.email)
+
     return db_user
 
 @app.post("/api/login", response_model=schemas.Token)
@@ -95,6 +109,26 @@ def approve_user(user_id: int, current_user: models.User = Depends(get_current_s
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.status = "approved"
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.get("/api/admin/users/all", response_model=list[schemas.UserResponse])
+def get_all_users(current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    users = db.query(models.User).order_by(models.User.id.desc()).all()
+    return users
+
+@app.post("/api/admin/users/role/{user_id}", response_model=schemas.UserResponse)
+def change_user_role(user_id: int, role: str, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    if role not in ["user", "superadmin"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = role
     db.commit()
     db.refresh(user)
     return user
@@ -154,6 +188,7 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
     meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
+    is_host = (current_user.id == meeting.host_id) or (current_user.role == "superadmin")
     
     token = api.AccessToken("APIWJqnkC7Ntahy", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA") \
         .with_identity(str(current_user.id)) \
@@ -161,8 +196,75 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
         .with_grants(api.VideoGrants(
             room_join=True,
             room=room_id,
+            room_admin=is_host,
+            can_update_own_metadata=True
         ))
     return {"token": token.to_jwt()}
+
+@app.post("/api/meetings/{room_id}/kick/{identity}")
+async def kick_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if current_user.id != meeting.host_id and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    async with api.LiveKitAPI(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) as lk:
+        await lk.room.remove_participant(
+            api.RoomParticipantIdentity(room=room_id, identity=identity)
+        )
+    return {"status": "success"}
+
+@app.post("/api/meetings/{room_id}/mute/{identity}")
+async def mute_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if current_user.id != meeting.host_id and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    async with api.LiveKitAPI(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) as lk:
+        # First, list tracks of the participant to find the audio track SID
+        participant = await lk.room.get_participant(
+            api.RoomParticipantIdentity(room=room_id, identity=identity)
+        )
+        for track in participant.tracks:
+            if track.type == api.TrackType.AUDIO:
+                await lk.room.mute_published_track(
+                    api.MuteRoomTrackRequest(
+                        room=room_id,
+                        identity=identity,
+                        track_sid=track.sid,
+                        muted=True
+                    )
+                )
+    return {"status": "success"}
+
+@app.post("/api/meetings/{room_id}/video-off/{identity}")
+async def disable_video_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if current_user.id != meeting.host_id and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    async with api.LiveKitAPI(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) as lk:
+        participant = await lk.room.get_participant(
+            api.RoomParticipantIdentity(room=room_id, identity=identity)
+        )
+        for track in participant.tracks:
+            if track.type == api.TrackType.VIDEO:
+                await lk.room.mute_published_track(
+                    api.MuteRoomTrackRequest(
+                        room=room_id,
+                        identity=identity,
+                        track_sid=track.sid,
+                        muted=True
+                    )
+                )
+    return {"status": "success"}
+
+
 
 @app.post("/api/meetings/{room_id}/guest")
 def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depends(get_db)):
