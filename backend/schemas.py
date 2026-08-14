@@ -17,6 +17,7 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+
 class MeetingBase(BaseModel):
     title: str
     scheduled_at: Optional[datetime] = None
@@ -32,6 +33,19 @@ class MeetingResponse(MeetingBase):
 
     class Config:
         from_attributes = True
+
+class Meeting(MeetingBase):
+    id: int
+    host_id: int
+    room_id: str
+
+    class Config:
+        from_attributes = True
+
+class GuestJoin(BaseModel):
+    name: str
+    institution: str
+
 
 class Token(BaseModel):
     access_token: str

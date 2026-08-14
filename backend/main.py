@@ -163,3 +163,21 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
             room=room_id,
         ))
     return {"token": token.to_jwt()}
+
+@app.post("/api/meetings/{room_id}/guest")
+def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    
+    guest_identity = f"guest_{uuid.uuid4().hex[:8]}"
+    guest_name = f"{guest.name} ({guest.institution})"
+
+    token = api.AccessToken("APIWJqnkC7Ntahy", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA") \
+        .with_identity(guest_identity) \
+        .with_name(guest_name) \
+        .with_grants(api.VideoGrants(
+            room_join=True,
+            room=room_id,
+        ))
+    return {"token": token.to_jwt()}
