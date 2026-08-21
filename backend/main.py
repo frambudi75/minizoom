@@ -196,7 +196,10 @@ def create_instant_meeting(current_user: models.User = Depends(get_current_activ
 
 @app.get("/api/meetings", response_model=list[schemas.MeetingResponse])
 def get_meetings(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    meetings = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id).order_by(models.Meeting.scheduled_at.desc()).all()
+    if current_user.role == "superadmin":
+        meetings = db.query(models.Meeting).order_by(models.Meeting.scheduled_at.desc()).all()
+    else:
+        meetings = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id).order_by(models.Meeting.scheduled_at.desc()).all()
     return meetings
 
 @app.post("/api/meetings/schedule", response_model=schemas.MeetingResponse)
@@ -216,7 +219,11 @@ def schedule_meeting(meeting: schemas.MeetingCreate, current_user: models.User =
 
 @app.delete("/api/meetings/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_meeting(room_id: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id, models.Meeting.host_id == current_user.id).first()
+    if current_user.role == "superadmin":
+        meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    else:
+        meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id, models.Meeting.host_id == current_user.id).first()
+        
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found or you don't have permission")
     db.delete(meeting)
