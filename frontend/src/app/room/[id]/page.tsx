@@ -71,7 +71,7 @@ function ParticipantSidebar({ roomId }: { roomId: string }) {
     };
 
     return (
-        <div className="w-80 bg-[#1e1e1e] border-l border-slate-800 p-4 flex flex-col h-full overflow-y-auto z-10 shrink-0">
+        <div className="w-full md:w-80 bg-[#1e1e1e] border-t md:border-t-0 md:border-l border-slate-800 p-4 flex flex-col h-[40vh] md:h-full overflow-y-auto z-10 shrink-0">
             <h3 className="text-slate-100 font-semibold mb-6 flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-400" /> 
                 Participants ({participants.length})
@@ -290,9 +290,9 @@ export default function Room() {
           }
       }}
       data-lk-theme="default"
-      style={{ height: '100vh', backgroundColor: '#0f172a', display: 'flex', overflow: 'hidden' }}
+      className="flex flex-col md:flex-row w-full h-[100dvh] bg-[#0f172a] overflow-hidden"
     >
-      <div className="flex-1 overflow-hidden h-full">
+      <div className="flex-1 overflow-hidden min-h-0">
         <VideoConference />
       </div>
       <ParticipantSidebar roomId={params.id as string} />
