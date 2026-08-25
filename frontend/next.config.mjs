@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output: image final jauh lebih kecil (~100MB vs ~1GB)
+  // Hanya include file yang diperlukan untuk production
+  output: 'standalone',
   // Proxy API request ke backend (tidak perlu CORS dari browser)
   async rewrites() {
     return [
