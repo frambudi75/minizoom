@@ -361,7 +361,15 @@ export default function Dashboard() {
                                                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">User</span>
                                                     )}
                                                 </td>
-                                                <td className="py-4 px-4 text-right">
+                                                <td className="py-4 px-4 text-right flex justify-end gap-2">
+                                                    {u.status === 'pending' && (
+                                                        <button 
+                                                            onClick={() => approveUser(u.id)}
+                                                            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                    )}
                                                     {u.id !== user.id && (
                                                         <button 
                                                             onClick={() => toggleUserRole(u.id, u.role)}

@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000" # Aman dari port terlarang
     environment:
-      - DATABASE_URL=sqlite:///./minizoom.db
+      - DATABASE_URL=sqlite:///./data/minizoom.db
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-APIWJqnkC7Ntahy}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA}
       - LIVEKIT_URL=${LIVEKIT_URL:-wss://minizoom-befa1owr.livekit.cloud}
@@ -19,6 +19,7 @@ services:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
     volumes:
       - ./backend:/app
+      - minizoom_data:/app/data
     restart: unless-stopped
 
   frontend:
@@ -41,3 +42,6 @@ services:
       - "7881:7881"
       - "7882:7882/udp"
     restart: unless-stopped
+
+volumes:
+  minizoom_data:
