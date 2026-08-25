@@ -277,7 +277,7 @@ export default function Room() {
       video={true}
       audio={true}
       token={token}
-      serverUrl="wss://minizoom-befa1owr.livekit.cloud"
+      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || "wss://minizoom-befa1owr.livekit.cloud"}
       connect={true}
       onDisconnected={() => {
           if (localStorage.getItem('token')) {

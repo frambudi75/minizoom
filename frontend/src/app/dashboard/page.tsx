@@ -50,7 +50,7 @@ export default function Dashboard() {
         }
 
         const resMeetings = await fetch('/api/meetings', { headers: { Authorization: `Bearer ${token}` } });
-        setMeetings(await resMeetings.json());
+        if (resMeetings.ok) setMeetings(await resMeetings.json());
 
       } catch (err) {
         localStorage.removeItem('token');
@@ -95,29 +95,41 @@ export default function Dashboard() {
   const createInstantMeeting = async () => {
     setMeetingLoading(true);
     const token = localStorage.getItem('token');
-    const res = await fetch('/api/meetings/instant', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    router.push(`/room/${data.room_id}`);
+    try {
+      const res = await fetch('/api/meetings/instant', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Failed to create meeting');
+      const data = await res.json();
+      router.push(`/room/${data.room_id}`);
+    } catch (err) {
+      alert('Gagal membuat meeting. Coba lagi.');
+      setMeetingLoading(false);
+    }
   };
 
   const scheduleMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
     setMeetingLoading(true);
     const token = localStorage.getItem('token');
-    const payload = {
-        title: scheduleData.title,
-        scheduled_at: new Date(scheduleData.scheduled_at).toISOString()
-    };
-    await fetch('/api/meetings/schedule', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload)
-    });
-    const resMeetings = await fetch('/api/meetings', { headers: { Authorization: `Bearer ${token}` } });
-    setMeetings(await resMeetings.json());
-    setScheduleData({ title: '', scheduled_at: '' });
-    setActiveTab('overview');
-    setMeetingLoading(false);
+    try {
+      const payload = {
+          title: scheduleData.title,
+          scheduled_at: new Date(scheduleData.scheduled_at).toISOString()
+      };
+      const res = await fetch('/api/meetings/schedule', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to schedule meeting');
+      const resMeetings = await fetch('/api/meetings', { headers: { Authorization: `Bearer ${token}` } });
+      if (resMeetings.ok) setMeetings(await resMeetings.json());
+      setScheduleData({ title: '', scheduled_at: '' });
+      setActiveTab('overview');
+    } catch (err) {
+      alert('Gagal menjadwalkan meeting. Coba lagi.');
+    } finally {
+      setMeetingLoading(false);
+    }
   };
 
   const copyLink = (roomId: string) => {
