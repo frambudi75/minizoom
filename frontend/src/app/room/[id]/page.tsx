@@ -28,42 +28,78 @@ function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitT
         }
     })();
 
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+
     const handleMute = async (identity: string) => {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            alert('Sesi login telah berakhir. Silakan login kembali.');
+            return;
+        }
+        setActionLoading(`mute-${identity}`);
         try {
-            await fetch(`/api/meetings/${roomId}/mute/${identity}`, {
+            const res = await fetch(`/api/meetings/${roomId}/mute/${identity}`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` }
             });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(`Gagal mute: ${data.detail || 'Terjadi kesalahan'}`);
+            }
         } catch (err) {
             console.error(err);
+            alert('Gagal menghubungi server untuk mute peserta.');
+        } finally {
+            setActionLoading(null);
         }
     };
 
     const handleKick = async (identity: string) => {
+        if (!confirm('Yakin ingin mengeluarkan peserta ini dari meeting?')) return;
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            alert('Sesi login telah berakhir. Silakan login kembali.');
+            return;
+        }
+        setActionLoading(`kick-${identity}`);
         try {
-            await fetch(`/api/meetings/${roomId}/kick/${identity}`, {
+            const res = await fetch(`/api/meetings/${roomId}/kick/${identity}`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` }
             });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(`Gagal kick: ${data.detail || 'Terjadi kesalahan'}`);
+            }
         } catch (err) {
             console.error(err);
+            alert('Gagal menghubungi server untuk kick peserta.');
+        } finally {
+            setActionLoading(null);
         }
     };
 
     const handleVideoOff = async (identity: string) => {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            alert('Sesi login telah berakhir. Silakan login kembali.');
+            return;
+        }
+        setActionLoading(`video-${identity}`);
         try {
-            await fetch(`/api/meetings/${roomId}/video-off/${identity}`, {
+            const res = await fetch(`/api/meetings/${roomId}/video-off/${identity}`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` }
             });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(`Gagal matikan video: ${data.detail || 'Terjadi kesalahan'}`);
+            }
         } catch (err) {
             console.error(err);
+            alert('Gagal menghubungi server untuk matikan video peserta.');
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -98,24 +134,27 @@ function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitT
                             <div className="flex gap-2 mt-1">
                                 <button 
                                     onClick={() => handleMute(p.identity)} 
-                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 px-2 py-1.5 rounded-md transition-colors"
+                                    disabled={actionLoading === `mute-${p.identity}`}
+                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 disabled:opacity-50 px-2 py-1.5 rounded-md transition-colors"
                                     title="Mute Microphone"
                                 >
-                                    <MicOff className="w-3 h-3" /> Mute
+                                    <MicOff className="w-3 h-3" /> {actionLoading === `mute-${p.identity}` ? '...' : 'Mute'}
                                 </button>
                                 <button 
                                     onClick={() => handleVideoOff(p.identity)} 
-                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 px-2 py-1.5 rounded-md transition-colors"
+                                    disabled={actionLoading === `video-${p.identity}`}
+                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 disabled:opacity-50 px-2 py-1.5 rounded-md transition-colors"
                                     title="Turn Off Video"
                                 >
-                                    <VideoOff className="w-3 h-3" /> Stop Vid
+                                    <VideoOff className="w-3 h-3" /> {actionLoading === `video-${p.identity}` ? '...' : 'Stop Vid'}
                                 </button>
                                 <button 
                                     onClick={() => handleKick(p.identity)} 
-                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 px-2 py-1.5 rounded-md transition-colors"
+                                    disabled={actionLoading === `kick-${p.identity}`}
+                                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50 px-2 py-1.5 rounded-md transition-colors"
                                     title="Kick Participant"
                                 >
-                                    <UserMinus className="w-3 h-3" /> Kick
+                                    <UserMinus className="w-3 h-3" /> {actionLoading === `kick-${p.identity}` ? '...' : 'Kick'}
                                 </button>
                             </div>
                         )}

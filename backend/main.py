@@ -177,8 +177,16 @@ def update_settings(settings_in: schemas.SystemSettingsCreate, current_user: mod
 def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
 
-LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
-LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "APIWJqnkC7Ntahy")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA")
+
+def get_livekit_http_url():
+    raw_url = os.getenv("LIVEKIT_URL", "https://minizoom-befa1owr.livekit.cloud")
+    if raw_url.startswith("wss://"):
+        raw_url = "https://" + raw_url[6:]
+    elif raw_url.startswith("ws://"):
+        raw_url = "http://" + raw_url[5:]
+    return raw_url.rstrip("/")
 
 @app.post("/api/meetings/instant", response_model=schemas.MeetingResponse)
 def create_instant_meeting(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -237,7 +245,7 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
         raise HTTPException(status_code=404, detail="Meeting not found")
     is_host = (current_user.id == meeting.host_id) or (current_user.role == "superadmin")
     
-    token = api.AccessToken("APIWJqnkC7Ntahy", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA") \
+    token = api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) \
         .with_identity(str(current_user.id)) \
         .with_name(current_user.name) \
         .with_grants(api.VideoGrants(
@@ -256,11 +264,15 @@ async def kick_participant(room_id: str, identity: str, current_user: models.Use
     if current_user.id != meeting.host_id and current_user.role != "superadmin":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    async with api.LiveKitAPI(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) as lk:
-        await lk.room.remove_participant(
-            api.RoomParticipantIdentity(room=room_id, identity=identity)
-        )
-    return {"status": "success"}
+    try:
+        async with api.LiveKitAPI(url=get_livekit_http_url(), api_key=LIVEKIT_API_KEY, api_secret=LIVEKIT_API_SECRET) as lk:
+            await lk.room.remove_participant(
+                api.RoomParticipantIdentity(room=room_id, identity=identity)
+            )
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error kicking participant {identity}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/meetings/{room_id}/mute/{identity}")
 async def mute_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -270,22 +282,27 @@ async def mute_participant(room_id: str, identity: str, current_user: models.Use
     if current_user.id != meeting.host_id and current_user.role != "superadmin":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    async with api.LiveKitAPI(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) as lk:
-        # First, list tracks of the participant to find the audio track SID
-        participant = await lk.room.get_participant(
-            api.RoomParticipantIdentity(room=room_id, identity=identity)
-        )
-        for track in participant.tracks:
-            if track.type == api.TrackType.AUDIO:
-                await lk.room.mute_published_track(
-                    api.MuteRoomTrackRequest(
-                        room=room_id,
-                        identity=identity,
-                        track_sid=track.sid,
-                        muted=True
+    try:
+        async with api.LiveKitAPI(url=get_livekit_http_url(), api_key=LIVEKIT_API_KEY, api_secret=LIVEKIT_API_SECRET) as lk:
+            participant = await lk.room.get_participant(
+                api.RoomParticipantIdentity(room=room_id, identity=identity)
+            )
+            for track in participant.tracks:
+                # Periksa apakah track audio (int 0, atau string 'AUDIO')
+                is_audio = getattr(track, 'type', None) == 0 or "AUDIO" in str(getattr(track, 'type', '')).upper()
+                if is_audio:
+                    await lk.room.mute_published_track(
+                        api.MuteRoomTrackRequest(
+                            room=room_id,
+                            identity=identity,
+                            track_sid=track.sid,
+                            muted=True
+                        )
                     )
-                )
-    return {"status": "success"}
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error muting participant {identity}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/meetings/{room_id}/video-off/{identity}")
 async def disable_video_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -295,23 +312,27 @@ async def disable_video_participant(room_id: str, identity: str, current_user: m
     if current_user.id != meeting.host_id and current_user.role != "superadmin":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    async with api.LiveKitAPI(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) as lk:
-        participant = await lk.room.get_participant(
-            api.RoomParticipantIdentity(room=room_id, identity=identity)
-        )
-        for track in participant.tracks:
-            if track.type == api.TrackType.VIDEO:
-                await lk.room.mute_published_track(
-                    api.MuteRoomTrackRequest(
-                        room=room_id,
-                        identity=identity,
-                        track_sid=track.sid,
-                        muted=True
+    try:
+        async with api.LiveKitAPI(url=get_livekit_http_url(), api_key=LIVEKIT_API_KEY, api_secret=LIVEKIT_API_SECRET) as lk:
+            participant = await lk.room.get_participant(
+                api.RoomParticipantIdentity(room=room_id, identity=identity)
+            )
+            for track in participant.tracks:
+                # Periksa apakah track video (int 1, atau string 'VIDEO')
+                is_video = getattr(track, 'type', None) == 1 or "VIDEO" in str(getattr(track, 'type', '')).upper()
+                if is_video:
+                    await lk.room.mute_published_track(
+                        api.MuteRoomTrackRequest(
+                            room=room_id,
+                            identity=identity,
+                            track_sid=track.sid,
+                            muted=True
+                        )
                     )
-                )
-    return {"status": "success"}
-
-
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error turning off video for participant {identity}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/meetings/{room_id}/guest")
 def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depends(get_db)):
@@ -322,7 +343,7 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
     guest_identity = f"guest_{uuid.uuid4().hex[:8]}"
     guest_name = f"{guest.name} ({guest.institution})"
 
-    token = api.AccessToken("APIWJqnkC7Ntahy", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA") \
+    token = api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) \
         .with_identity(guest_identity) \
         .with_name(guest_name) \
         .with_grants(api.VideoGrants(
@@ -330,3 +351,4 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
             room=room_id,
         ))
     return {"token": token.to_jwt()}
+
