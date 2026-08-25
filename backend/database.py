@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 import os
 
@@ -8,16 +9,15 @@ import os
 # sehingga data tidak hilang saat rebuild/update container
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////app/data/minizoom.db")
 
+# SQLite tidak mendukung concurrent multi-process pool seperti PostgreSQL.
+# Gunakan StaticPool (single shared connection) agar tidak ada konflik antar worker.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={
         "check_same_thread": False,
         "timeout": 30,          # Tunggu max 30 detik jika DB terkunci
     },
-    # Connection pool agar koneksi tidak dibuat ulang setiap request
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,         # Cek koneksi sebelum dipakai (hindari stale connection)
+    poolclass=StaticPool,       # 1 koneksi shared — aman untuk SQLite
 )
 
 # Aktifkan WAL mode agar read dan write bisa berjalan paralel (tidak saling blokir)
@@ -28,7 +28,6 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA synchronous=NORMAL")    # Lebih cepat dari FULL, masih aman
     cursor.execute("PRAGMA cache_size=-64000")     # Cache 64MB di memory
     cursor.execute("PRAGMA temp_store=MEMORY")     # Temp tables di memory
-    cursor.execute("PRAGMA mmap_size=268435456")   # Memory-mapped I/O 256MB
     cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

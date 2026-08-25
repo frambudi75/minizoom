@@ -15,4 +15,7 @@ RUN mkdir -p /app/data
 # Jalankan uvicorn dengan multiple workers untuk performa lebih baik
 # --workers 4 = 4 proses paralel (gunakan rumus: (2 x CPU) + 1)
 # --loop uvloop = event loop paling cepat untuk Python async
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--loop", "uvloop"]
+# SQLite tidak aman dengan multiple workers (setiap worker = proses terpisah = lock konflik)
+# Gunakan 1 worker untuk SQLite. WAL mode sudah cukup untuk concurrent reads.
+# Jika ingin multi-worker, ganti database ke PostgreSQL.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "uvloop"]
