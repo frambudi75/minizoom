@@ -12,24 +12,21 @@ import '@livekit/components-styles';
 import { User, Building2, ArrowRight, MicOff, VideoOff, UserMinus, Users } from 'lucide-react';
 
 // Custom Participant Sidebar Component
-function ParticipantSidebar({ roomId }: { roomId: string }) {
+function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitToken: string }) {
     const participants = useParticipants();
     const { localParticipant } = useLocalParticipant();
     
-    const [isHost, setIsHost] = useState(false);
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                if (payload?.video?.roomAdmin) {
-                    setIsHost(true);
-                }
-            } catch (e) {
-                console.error(e);
-            }
+    // Cek apakah user ini host/superadmin dari LiveKit token (bukan backend JWT)
+    // LiveKit token mengandung payload.video.roomAdmin = true untuk host & superadmin
+    const isHost = (() => {
+        if (!livekitToken) return false;
+        try {
+            const payload = JSON.parse(atob(livekitToken.split('.')[1]));
+            return payload?.video?.roomAdmin === true;
+        } catch {
+            return false;
         }
-    }, []);
+    })();
 
     const handleMute = async (identity: string) => {
         const token = localStorage.getItem('token');
@@ -295,7 +292,7 @@ export default function Room() {
       <div className="flex-1 overflow-hidden min-h-0">
         <VideoConference />
       </div>
-      <ParticipantSidebar roomId={params.id as string} />
+      <ParticipantSidebar roomId={params.id as string} livekitToken={token} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
