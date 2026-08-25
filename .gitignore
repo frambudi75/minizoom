@@ -1,1 +1,14 @@
 *.zip
+
+# Database — jangan pernah di-commit ke repo
+*.db
+backend/minizoom.db
+backend/data/
+
+# Environment variables (berisi secret)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

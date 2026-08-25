@@ -1,0 +1,7 @@
+# Jangan ikut-copy database ke dalam image Docker
+# Database disimpan di Docker volume (minizoom_data) agar persisten saat rebuild
+minizoom.db
+*.db
+__pycache__/
+*.pyc
+*.pyo

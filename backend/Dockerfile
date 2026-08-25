@@ -5,7 +5,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Salin semua file kecuali database (sudah di-handle oleh .dockerignore)
 COPY . .
 
-# Menjalankan uvicorn di port 8000 (menghindari port 5000 dan 2025-2028)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Buat folder /app/data untuk menyimpan database secara persisten
+# Folder ini akan di-mount sebagai Docker volume sehingga data tidak hilang saat rebuild
+RUN mkdir -p /app/data
+
+# Jalankan uvicorn dengan multiple workers untuk performa lebih baik
+# --workers 4 = 4 proses paralel (gunakan rumus: (2 x CPU) + 1)
+# --loop uvloop = event loop paling cepat untuk Python async
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--loop", "uvloop"]

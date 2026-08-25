@@ -7,3 +7,5 @@ pyjwt
 python-multipart
 livekit-api
 email-validator
+uvloop          # Event loop tercepat untuk Python async
+httptools       # HTTP parser tercepat untuk uvicorn
