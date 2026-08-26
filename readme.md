@@ -26,14 +26,18 @@ Minizoom is a self-hosted, lightweight video conferencing application designed f
    cd minizoom
    ```
 
-2. Configure environment variables in a `.env` file (or directly in `docker-compose.yml`):
+2. Configure environment variables by copying `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit the `.env` file with your LiveKit credentials:
    ```env
-   # LiveKit Credentials
+   # LiveKit Credentials (LiveKit Cloud or Self-hosted)
+   LIVEKIT_URL=wss://your-livekit-server
    LIVEKIT_API_KEY=your_api_key
    LIVEKIT_API_SECRET=your_api_secret
-   LIVEKIT_URL=wss://your-livekit-server
    ```
-   *(Note: SMTP and Discord Webhook configurations can be set directly from the Superadmin Dashboard UI in the Settings tab!)*
+   *(Note: SMTP and Discord Webhook configurations can also be set directly from the Superadmin Dashboard UI in the Settings tab!)*
 
 3. Build and start the containers:
    ```bash
