@@ -8,9 +8,9 @@ services:
       - "8000:8000" # Aman dari port terlarang
     environment:
       - DATABASE_URL=sqlite:///./data/minizoom.db
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-APIWJqnkC7Ntahy}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA}
-      - LIVEKIT_URL=${LIVEKIT_URL:-wss://minizoom-befa1owr.livekit.cloud}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://localhost:7880}
       - SMTP_SERVER=${SMTP_SERVER:-}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
@@ -29,6 +29,7 @@ services:
       - "3000:3000" # Aman dari port terlarang
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_URL:-ws://localhost:7880}
     depends_on:
       - backend
     restart: unless-stopped

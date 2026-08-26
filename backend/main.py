@@ -177,11 +177,11 @@ def update_settings(settings_in: schemas.SystemSettingsCreate, current_user: mod
 def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
 
-LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "APIWJqnkC7Ntahy")
-LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "e7tbVftSYBlUJMuX5jetA1nzG0TwEw8qkdN7radhZRXA")
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
 
 def get_livekit_http_url():
-    raw_url = os.getenv("LIVEKIT_URL", "https://minizoom-befa1owr.livekit.cloud")
+    raw_url = os.getenv("LIVEKIT_URL", "http://localhost:7880")
     if raw_url.startswith("wss://"):
         raw_url = "https://" + raw_url[6:]
     elif raw_url.startswith("ws://"):
