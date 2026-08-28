@@ -285,8 +285,8 @@ function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitT
 
                     <p className="text-[11px] text-slate-400 mt-2 leading-relaxed text-center">
                         {isRecording
-                            ? "Rekaman sedang berjalan. Klik stop untuk mengunduh file video (.webm)."
-                            : "Rekam layar & audio meeting, file otomatis tersimpan di browser Anda."}
+                            ? "🔴 Sedang merekam... Klik 'Stop & Save' untuk mengunduh video (.webm)."
+                            : "💡 Saat popup browser muncul, pilih tab 'Minizoom' & centang 'Also share tab audio' untuk mulai merekam."}
                     </p>
                 </div>
             )}
