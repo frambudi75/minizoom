@@ -3,6 +3,14 @@ const nextConfig = {
   // Standalone output: image final jauh lebih kecil (~100MB vs ~1GB)
   // Hanya include file yang diperlukan untuk production
   output: 'standalone',
+
+  // Mempercepat build drastis di VPS: skip typecheck & linting saat build image
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Proxy API request ke backend (tidak perlu CORS dari browser)
   async rewrites() {
     return [

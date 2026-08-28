@@ -7,6 +7,7 @@ RUN npm ci --frozen-lockfile
 # ---- Build stage ----
 FROM node:20-alpine AS builder
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 # Ambil node_modules dari layer deps (sudah ter-cache)
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
