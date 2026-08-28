@@ -170,6 +170,7 @@ export default function Room() {
   const params = useParams();
   const router = useRouter();
   const [token, setToken] = useState('');
+  const [serverUrl, setServerUrl] = useState('');
   const [needsGuestInfo, setNeedsGuestInfo] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestInstitution, setGuestInstitution] = useState('');
@@ -190,6 +191,9 @@ export default function Room() {
         if (!res.ok) throw new Error();
         const data = await res.json();
         setToken(data.token);
+        if (data.server_url) {
+          setServerUrl(data.server_url);
+        }
       } catch (err) {
         alert("Failed to join room. It may not exist or you lack permission.");
         router.push('/dashboard');
@@ -211,6 +215,9 @@ export default function Room() {
           if (!res.ok) throw new Error('Meeting not found');
           const data = await res.json();
           setToken(data.token);
+          if (data.server_url) {
+            setServerUrl(data.server_url);
+          }
           setNeedsGuestInfo(false);
       } catch (err) {
           setErrorMsg("Meeting room not found or unavailable.");
@@ -302,7 +309,7 @@ export default function Room() {
       );
   }
 
-  if (token === '') {
+  if (token === '' || serverUrl === '') {
     return (
         <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center text-slate-400 gap-4">
             <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -316,7 +323,7 @@ export default function Room() {
       video={true}
       audio={true}
       token={token}
-      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://localhost:7880"}
+      serverUrl={serverUrl}
       connect={true}
       onDisconnected={() => {
           if (localStorage.getItem('token')) {

@@ -188,6 +188,14 @@ def get_livekit_http_url():
         raw_url = "http://" + raw_url[5:]
     return raw_url.rstrip("/")
 
+def get_livekit_ws_url():
+    raw_url = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+    if raw_url.startswith("https://"):
+        raw_url = "wss://" + raw_url[8:]
+    elif raw_url.startswith("http://"):
+        raw_url = "ws://" + raw_url[7:]
+    return raw_url.rstrip("/")
+
 @app.post("/api/meetings/instant", response_model=schemas.MeetingResponse)
 def create_instant_meeting(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     room_id = str(uuid.uuid4())
@@ -254,7 +262,10 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
             room_admin=is_host,
             can_update_own_metadata=True
         ))
-    return {"token": token.to_jwt()}
+    return {
+        "token": token.to_jwt(),
+        "server_url": get_livekit_ws_url()
+    }
 
 @app.post("/api/meetings/{room_id}/kick/{identity}")
 async def kick_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -350,5 +361,8 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
             room_join=True,
             room=room_id,
         ))
-    return {"token": token.to_jwt()}
+    return {
+        "token": token.to_jwt(),
+        "server_url": get_livekit_ws_url()
+    }
 
