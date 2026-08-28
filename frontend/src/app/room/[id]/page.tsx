@@ -9,15 +9,15 @@ import {
   useLocalParticipant,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { User, Building2, ArrowRight, MicOff, VideoOff, UserMinus, Users } from 'lucide-react';
+import { User, Building2, ArrowRight, MicOff, VideoOff, UserMinus, Users, Radio, Square, Download, Video } from 'lucide-react';
+import { useRef } from 'react';
 
 // Custom Participant Sidebar Component
 function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitToken: string }) {
     const participants = useParticipants();
     const { localParticipant } = useLocalParticipant();
     
-    // Cek apakah user ini host/superadmin dari LiveKit token (bukan backend JWT)
-    // LiveKit token mengandung payload.video.roomAdmin = true untuk host & superadmin
+    // Cek apakah user ini host/superadmin dari LiveKit token
     const isHost = (() => {
         if (!livekitToken) return false;
         try {
@@ -29,6 +29,148 @@ function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitT
     })();
 
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    // ================= Host Browser Screen & Audio Recorder =================
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordedChunksRef = useRef<Blob[]>([]);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Format detik ke format mm:ss / hh:mm:ss
+    const formatTime = (seconds: number) => {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        if (hrs > 0) {
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        if (isRecording) {
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } else {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setRecordingTime(0);
+        }
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [isRecording]);
+
+    const startRecording = async () => {
+        try {
+            // Minta izin share tab / screen browser beserta audio
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    frameRate: { ideal: 30, max: 60 }
+                },
+                audio: true
+            });
+
+            // Coba rekam juga mic host secara paralel
+            let audioTracks = displayStream.getAudioTracks();
+            let micStream: MediaStream | null = null;
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (e) {
+                // Mic ditolak/tidak ada, lanjut dengan display stream
+            }
+
+            let finalStream: MediaStream;
+            if (micStream && micStream.getAudioTracks().length > 0 && audioTracks.length > 0) {
+                // Mix display audio + mic audio menggunakan Web Audio API
+                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                const audioCtx = new AudioContextClass();
+                const dest = audioCtx.createMediaStreamDestination();
+
+                const displayAudioSource = audioCtx.createMediaStreamSource(new MediaStream(audioTracks));
+                displayAudioSource.connect(dest);
+
+                const micAudioSource = audioCtx.createMediaStreamSource(new MediaStream(micStream.getAudioTracks()));
+                micAudioSource.connect(dest);
+
+                finalStream = new MediaStream([
+                    ...displayStream.getVideoTracks(),
+                    ...dest.stream.getAudioTracks()
+                ]);
+            } else if (micStream && micStream.getAudioTracks().length > 0) {
+                finalStream = new MediaStream([
+                    ...displayStream.getVideoTracks(),
+                    ...micStream.getAudioTracks()
+                ]);
+            } else {
+                finalStream = displayStream;
+            }
+
+            // Pilih MIME Type yang didukung browser
+            const mimeTypes = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm',
+                'video/mp4'
+            ];
+            const selectedMime = mimeTypes.find(t => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) || '';
+
+            const recorder = new MediaRecorder(finalStream, selectedMime ? { mimeType: selectedMime } : undefined);
+            recordedChunksRef.current = [];
+
+            recorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunksRef.current.push(event.data);
+                }
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(recordedChunksRef.current, { type: selectedMime || 'video/webm' });
+                if (blob.size > 0) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    a.download = `Minizoom-Recording-${roomId}-${dateStr}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    }, 1000);
+                }
+
+                // Stop semua tracks
+                finalStream.getTracks().forEach(track => track.stop());
+                if (micStream) micStream.getTracks().forEach(track => track.stop());
+                setIsRecording(false);
+            };
+
+            // Jika user menghentikan share lewat banner browser native
+            displayStream.getVideoTracks()[0].onended = () => {
+                if (recorder.state !== 'inactive') {
+                    recorder.stop();
+                }
+            };
+
+            recorder.start(1000); // chunk tiap 1 detik
+            mediaRecorderRef.current = recorder;
+            setIsRecording(true);
+        } catch (err: any) {
+            if (err.name !== 'NotAllowedError') {
+                console.error("Recording error:", err);
+                alert("Gagal memulai perekaman: " + (err.message || 'Izin ditolak'));
+            }
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+        }
+    };
 
     const handleMute = async (identity: string) => {
         const token = localStorage.getItem('token');
@@ -105,7 +247,51 @@ function ParticipantSidebar({ roomId, livekitToken }: { roomId: string; livekitT
 
     return (
         <div className="w-full md:w-80 bg-[#1e1e1e] border-t md:border-t-0 md:border-l border-slate-800 p-4 flex flex-col h-[40vh] md:h-full overflow-y-auto z-10 shrink-0">
-            <h3 className="text-slate-100 font-semibold mb-6 flex items-center gap-2">
+            {/* Host Meeting Recorder Section */}
+            {isHost && (
+                <div className="mb-6 p-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl shadow-lg">
+                    <div className="flex items-center justify-between mb-2.5">
+                        <div className="flex items-center gap-2">
+                            <Video className="w-4 h-4 text-purple-400" />
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                                Meeting Recorder
+                            </span>
+                        </div>
+                        {isRecording && (
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-medium">
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                                REC {formatTime(recordingTime)}
+                            </div>
+                        )}
+                    </div>
+
+                    {!isRecording ? (
+                        <button
+                            onClick={startRecording}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-red-600/90 hover:bg-red-500 text-white text-xs font-semibold transition-all shadow-md shadow-red-900/20 active:scale-[0.98]"
+                        >
+                            <Radio className="w-4 h-4 animate-pulse" />
+                            Start Recording
+                        </button>
+                    ) : (
+                        <button
+                            onClick={stopRecording}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-semibold transition-all shadow-md shadow-amber-900/20 active:scale-[0.98]"
+                        >
+                            <Square className="w-3.5 h-3.5 fill-white" />
+                            Stop & Save to Device
+                        </button>
+                    )}
+
+                    <p className="text-[11px] text-slate-400 mt-2 leading-relaxed text-center">
+                        {isRecording
+                            ? "Rekaman sedang berjalan. Klik stop untuk mengunduh file video (.webm)."
+                            : "Rekam layar & audio meeting, file otomatis tersimpan di browser Anda."}
+                    </p>
+                </div>
+            )}
+
+            <h3 className="text-slate-100 font-semibold mb-4 flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-400" /> 
                 Participants ({participants.length})
             </h3>
