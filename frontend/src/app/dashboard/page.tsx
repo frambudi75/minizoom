@@ -113,6 +113,20 @@ export default function Dashboard() {
     }
   };
 
+  const openPersonalMeetingRoom = async () => {
+    setMeetingLoading(true);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch('/api/meetings/pmr', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Failed to fetch PMR');
+      const data = await res.json();
+      router.push(`/room/${data.room_id}`);
+    } catch (err) {
+      alert('Gagal membuka Personal Meeting Room. Coba lagi.');
+      setMeetingLoading(false);
+    }
+  };
+
   const scheduleMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
     setMeetingLoading(true);
@@ -232,11 +246,20 @@ export default function Dashboard() {
                 {activeTab === 'overview' && (
                     <>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <h1 className="text-2xl font-bold">Welcome back, {user?.name.split(' ')[0]}!</h1>
-                            <button onClick={createInstantMeeting} disabled={meetingLoading} className="flex items-center justify-center w-full sm:w-auto gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white rounded-xl font-medium transition-all shadow-lg shadow-blue-900/20 active:scale-95">
-                                <Plus className="w-4 h-4" />
-                                {meetingLoading ? 'Creating...' : 'Instant Meeting'}
-                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold">Welcome back, {user?.name.split(' ')[0]}!</h1>
+                                <p className="text-xs text-slate-400 mt-0.5">Host meetings, manage schedules, and collaborate in real-time.</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2.5">
+                                <button onClick={openPersonalMeetingRoom} disabled={meetingLoading} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl font-medium text-sm transition-all active:scale-95" title="Start or join your permanent Personal Meeting Room">
+                                    <Sparkles className="w-4 h-4 text-purple-400" />
+                                    Personal Room
+                                </button>
+                                <button onClick={createInstantMeeting} disabled={meetingLoading} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white rounded-xl font-medium text-sm transition-all shadow-lg shadow-blue-900/20 active:scale-95">
+                                    <Plus className="w-4 h-4" />
+                                    {meetingLoading ? 'Creating...' : 'Instant Meeting'}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -254,7 +277,14 @@ export default function Dashboard() {
                                             {meetings.map((m: any) => (
                                                 <div key={m.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-950/50 border border-slate-800/80 rounded-2xl gap-4 hover:border-slate-700 transition-colors">
                                                     <div>
-                                                        <h4 className="font-medium text-slate-200">{m.title}</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="font-medium text-slate-200">{m.title}</h4>
+                                                            {m.is_pmr && (
+                                                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded-full">
+                                                                    PMR
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-sm text-slate-400 mt-1">
                                                             {new Date(m.scheduled_at).toLocaleString()}
                                                         </p>

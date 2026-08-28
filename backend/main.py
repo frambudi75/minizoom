@@ -13,9 +13,9 @@ import discord_service
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Minizoom API", version="1.2.0")
+app = FastAPI(title="Minizoom API", version="1.3.0")
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 BUILD_DATE = "2026-08-28"
 
 @app.get("/api/system/status")
@@ -31,8 +31,11 @@ def get_system_status():
         "database": "SQLite WAL (Persistent Volume)",
         "features": [
             "Persistent Data Volume (/app/data)",
-            "Host Controls (Mute/Video/Kick)",
-            "Browser Screen & Audio Recording (.webm)",
+            "Host Controls (Mute All / Kick / Lock Room)",
+            "Real-Time In-Meeting Chat",
+            "Raise Hand Interaction",
+            "Personal Meeting Rooms (PMR)",
+            "Browser Meeting Recording (.webm)",
             "Dynamic LiveKit Cloud WebRTC SFU"
         ]
     }
@@ -268,12 +271,51 @@ def delete_meeting(room_id: str, current_user: models.User = Depends(get_current
     db.commit()
     return None
 
+@app.get("/api/meetings/pmr", response_model=schemas.MeetingResponse)
+def get_personal_meeting_room(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    pmr = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id, models.Meeting.is_pmr == True).first()
+    if not pmr:
+        room_id = f"pmr-{current_user.id}"
+        # Cek jika room_id sudah ada
+        existing = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+        if existing:
+            room_id = f"pmr-{current_user.id}-{uuid.uuid4().hex[:4]}"
+        pmr = models.Meeting(
+            title=f"{current_user.name}'s Personal Room",
+            room_id=room_id,
+            host_id=current_user.id,
+            status="active",
+            is_pmr=True,
+            is_locked=False
+        )
+        db.add(pmr)
+        db.commit()
+        db.refresh(pmr)
+    return pmr
+
+@app.post("/api/meetings/{room_id}/lock")
+def toggle_lock_meeting(room_id: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if current_user.id != meeting.host_id and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    meeting.is_locked = not bool(meeting.is_locked)
+    db.commit()
+    db.refresh(meeting)
+    return {"is_locked": meeting.is_locked}
+
 @app.get("/api/meetings/{room_id}/token")
 def get_livekit_token(room_id: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
+    
     is_host = (current_user.id == meeting.host_id) or (current_user.role == "superadmin")
+    
+    if meeting.is_locked and not is_host:
+        raise HTTPException(status_code=403, detail="Ruangan meeting sedang dikunci oleh Host.")
     
     token = api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET) \
         .with_identity(str(current_user.id)) \
@@ -289,8 +331,40 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
         ))
     return {
         "token": token.to_jwt(),
-        "server_url": get_livekit_ws_url()
+        "server_url": get_livekit_ws_url(),
+        "is_locked": bool(meeting.is_locked),
+        "is_host": is_host
     }
+
+@app.post("/api/meetings/{room_id}/mute-all")
+async def mute_all_participants(room_id: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    if current_user.id != meeting.host_id and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        async with api.LiveKitAPI(url=get_livekit_http_url(), api_key=LIVEKIT_API_KEY, api_secret=LIVEKIT_API_SECRET) as lk:
+            res = await lk.room.list_participants(api.ListParticipantsRequest(room=room_id))
+            for p in res.participants:
+                # Jangan mute host itu sendiri
+                if p.identity != str(current_user.id):
+                    for track in p.tracks:
+                        is_audio = getattr(track, 'type', None) == 0 or "AUDIO" in str(getattr(track, 'type', '')).upper()
+                        if is_audio and not track.muted:
+                            await lk.room.mute_published_track(
+                                api.MuteRoomTrackRequest(
+                                    room=room_id,
+                                    identity=p.identity,
+                                    track_sid=track.sid,
+                                    muted=True
+                                )
+                            )
+        return {"status": "success", "message": "All participants muted"}
+    except Exception as e:
+        print(f"Error muting all in {room_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/meetings/{room_id}/kick/{identity}")
 async def kick_participant(room_id: str, identity: str, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -376,6 +450,9 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
     
+    if meeting.is_locked:
+        raise HTTPException(status_code=403, detail="Ruangan meeting ini sedang dikunci oleh Host.")
+    
     guest_identity = f"guest_{uuid.uuid4().hex[:8]}"
     guest_name = f"{guest.name} ({guest.institution})"
 
@@ -392,6 +469,7 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
         ))
     return {
         "token": token.to_jwt(),
-        "server_url": get_livekit_ws_url()
+        "server_url": get_livekit_ws_url(),
+        "is_locked": bool(meeting.is_locked)
     }
 

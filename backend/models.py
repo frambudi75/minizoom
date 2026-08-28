@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -25,6 +25,8 @@ class Meeting(Base):
     host_id = Column(Integer, ForeignKey("users.id"))
     scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)
     status = Column(String, default="scheduled") # 'scheduled', 'active', 'finished'
+    is_locked = Column(Boolean, default=False)
+    is_pmr = Column(Boolean, default=False)
 
     host = relationship("User", back_populates="meetings")
 

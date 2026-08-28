@@ -30,6 +30,8 @@ class MeetingResponse(MeetingBase):
     room_id: str
     host_id: int
     status: str
+    is_locked: Optional[bool] = False
+    is_pmr: Optional[bool] = False
 
     class Config:
         from_attributes = True
