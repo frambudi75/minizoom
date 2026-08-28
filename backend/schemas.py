@@ -32,6 +32,7 @@ class MeetingResponse(MeetingBase):
     status: str
     is_locked: Optional[bool] = False
     is_pmr: Optional[bool] = False
+    active_participants: Optional[int] = 0
 
     class Config:
         from_attributes = True

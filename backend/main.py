@@ -237,12 +237,36 @@ def create_instant_meeting(current_user: models.User = Depends(get_current_activ
     return meeting
 
 @app.get("/api/meetings", response_model=list[schemas.MeetingResponse])
-def get_meetings(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+async def get_meetings(current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     if current_user.role == "superadmin":
         meetings = db.query(models.Meeting).order_by(models.Meeting.scheduled_at.desc()).all()
     else:
         meetings = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id).order_by(models.Meeting.scheduled_at.desc()).all()
-    return meetings
+    
+    # Ambil jumlah peserta yang sedang aktif di tiap room dari LiveKit
+    room_counts = {}
+    try:
+        async with api.LiveKitAPI(url=get_livekit_http_url(), api_key=LIVEKIT_API_KEY, api_secret=LIVEKIT_API_SECRET) as lk:
+            res = await lk.room.list_rooms(api.ListRoomsRequest())
+            for r in res.rooms:
+                room_counts[r.name] = r.num_participants
+    except Exception as e:
+        print(f"Notice: could not query active rooms from LiveKit: {e}")
+
+    results = []
+    for m in meetings:
+        results.append({
+            "id": m.id,
+            "title": m.title,
+            "room_id": m.room_id,
+            "host_id": m.host_id,
+            "scheduled_at": m.scheduled_at,
+            "status": m.status,
+            "is_locked": bool(m.is_locked),
+            "is_pmr": bool(m.is_pmr),
+            "active_participants": room_counts.get(m.room_id, 0)
+        })
+    return results
 
 @app.post("/api/meetings/schedule", response_model=schemas.MeetingResponse)
 def schedule_meeting(meeting: schemas.MeetingCreate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):

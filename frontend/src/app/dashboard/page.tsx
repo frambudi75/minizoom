@@ -277,11 +277,21 @@ export default function Dashboard() {
                                             {meetings.map((m: any) => (
                                                 <div key={m.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-950/50 border border-slate-800/80 rounded-2xl gap-4 hover:border-slate-700 transition-colors">
                                                     <div>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex flex-wrap items-center gap-2">
                                                             <h4 className="font-medium text-slate-200">{m.title}</h4>
                                                             {m.is_pmr && (
                                                                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded-full">
                                                                     PMR
+                                                                </span>
+                                                            )}
+                                                            {m.active_participants > 0 ? (
+                                                                <span className="flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full animate-pulse">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                                    {m.active_participants} Online
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-500 font-medium">
+                                                                    • 0 Peserta
                                                                 </span>
                                                             )}
                                                         </div>

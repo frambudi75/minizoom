@@ -572,6 +572,49 @@ function ParticipantSidebar({ roomId, livekitToken, initialIsLocked = false }: {
 }
 
 
+function RoomHeader({ roomId }: { roomId: string }) {
+  const participants = useParticipants();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      alert("Link room: " + window.location.href);
+    }
+  };
+
+  return (
+    <div className="h-12 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 z-10 shrink-0">
+      <div className="flex items-center gap-2.5 overflow-hidden">
+        <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="hidden sm:inline">Room:</span>
+          <span className="font-mono text-purple-300 truncate max-w-[120px] sm:max-w-[220px]">{roomId}</span>
+        </div>
+        <button
+          onClick={handleCopy}
+          className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700 transition-colors shrink-0"
+        >
+          {copied ? 'Copied!' : 'Copy Link'}
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-semibold font-mono text-xs shadow-sm">
+          <Users className="w-3.5 h-3.5 text-indigo-400" />
+          <span>{participants.length} Peserta</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function Room() {
   const params = useParams();
   const router = useRouter();
@@ -746,8 +789,11 @@ export default function Room() {
       data-lk-theme="default"
       className="flex flex-col md:flex-row w-full h-[100dvh] bg-[#0f172a] overflow-hidden"
     >
-      <div className="flex-1 overflow-hidden min-h-0">
-        <VideoConference />
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <RoomHeader roomId={params.id as string} />
+        <div className="flex-1 overflow-hidden min-h-0">
+          <VideoConference />
+        </div>
       </div>
       <ParticipantSidebar roomId={params.id as string} livekitToken={token} initialIsLocked={isLocked} />
     </LiveKitRoom>
