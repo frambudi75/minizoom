@@ -525,7 +525,6 @@ export default function Room() {
         <VideoConference />
       </div>
       <ParticipantSidebar roomId={params.id as string} livekitToken={token} />
-      <RoomAudioRenderer />
     </LiveKitRoom>
   );
 }

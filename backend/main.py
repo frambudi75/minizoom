@@ -260,6 +260,9 @@ def get_livekit_token(room_id: str, current_user: models.User = Depends(get_curr
             room_join=True,
             room=room_id,
             room_admin=is_host,
+            can_publish=True,
+            can_subscribe=True,
+            can_publish_data=True,
             can_update_own_metadata=True
         ))
     return {
@@ -360,6 +363,10 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
         .with_grants(api.VideoGrants(
             room_join=True,
             room=room_id,
+            can_publish=True,
+            can_subscribe=True,
+            can_publish_data=True,
+            can_update_own_metadata=True
         ))
     return {
         "token": token.to_jwt(),
