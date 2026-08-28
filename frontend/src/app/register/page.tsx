@@ -24,7 +24,11 @@ export default function Register() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Pendaftaran gagal');
       
-      alert("Pendaftaran berhasil! Jika Anda pendaftar pertama, Anda otomatis menjadi Superadmin.");
+      if (data.role === 'superadmin') {
+        alert("Pendaftaran berhasil! Sebagai akun pendaftar pertama, Anda otomatis menjadi Superadmin.");
+      } else {
+        alert("Pendaftaran berhasil! Akun Anda berstatus 'User Biasa' dan sedang menunggu persetujuan (approval) dari Superadmin.");
+      }
       router.push('/login');
     } catch (err: any) {
       setError(err.message);

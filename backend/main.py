@@ -87,11 +87,11 @@ def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Se
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed_password = auth.get_password_hash(user.password)
-    # Auto-approve and make superadmin if it's the first user
+    # Auto-approve and make superadmin ONLY if it's the very first user in the system
     if db.query(models.User).count() == 0:
         db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password, role="superadmin", status="approved")
     else:
-        db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password)
+        db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password, role="user", status="pending")
     
     db.add(db_user)
     db.commit()
