@@ -34,6 +34,24 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+def run_migrations():
+    """Menambahkan kolom baru ke tabel yang sudah ada secara aman tanpa reset data."""
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            # Periksa tabel meetings
+            res = conn.execute(text("PRAGMA table_info(meetings)")).fetchall()
+            columns = [row[1] for row in res]
+            if columns:  # Tabel sudah ada
+                if "is_locked" not in columns:
+                    conn.execute(text("ALTER TABLE meetings ADD COLUMN is_locked BOOLEAN DEFAULT 0"))
+                    print("[Migration] Added column 'is_locked' to meetings table")
+                if "is_pmr" not in columns:
+                    conn.execute(text("ALTER TABLE meetings ADD COLUMN is_pmr BOOLEAN DEFAULT 0"))
+                    print("[Migration] Added column 'is_pmr' to meetings table")
+    except Exception as e:
+        print(f"[Migration Warning] {e}")
+
 def get_db():
     db = SessionLocal()
     try:

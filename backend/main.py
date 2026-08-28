@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 import models, schemas, auth
-from database import engine, get_db
+from database import engine, get_db, run_migrations
 import os
 import uuid
 from livekit import api
@@ -12,6 +12,7 @@ import email_service
 import discord_service
 
 models.Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(title="Minizoom API", version="1.3.0")
 
