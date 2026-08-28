@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Video, Users, CheckCircle, Plus, LogOut, Calendar, Clock, LayoutDashboard, Trash2, Settings } from 'lucide-react';
+import { Video, Users, CheckCircle, Plus, LogOut, Calendar, Clock, LayoutDashboard, Trash2, Settings, Server, ShieldCheck, Activity } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export default function Dashboard() {
     smtp_server: '', smtp_port: 587, smtp_username: '', smtp_password: '', smtp_from: '', discord_webhook_url: ''
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [systemInfo, setSystemInfo] = useState<any>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -35,6 +36,12 @@ export default function Dashboard() {
         if (!resMe.ok) throw new Error();
         const userData = await resMe.json();
         setUser(userData);
+
+        // Fetch system version info
+        fetch('/api/system/status')
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { if (data) setSystemInfo(data); })
+          .catch(() => {});
 
         if (userData.role === 'superadmin') {
           const resAdmin = await fetch('/api/admin/users/pending', { headers: { Authorization: `Bearer ${token}` } });
@@ -161,9 +168,14 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-950 text-slate-50 flex">
       {/* Sidebar */}
       <aside className="w-64 border-r border-slate-800 bg-slate-900/30 flex-col hidden md:flex">
-        <div className="h-16 flex items-center gap-2 px-6 border-b border-slate-800 text-blue-400">
-            <Video className="w-6 h-6" />
-            <span className="font-bold text-lg tracking-tight">Minizoom</span>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 text-blue-400">
+            <div className="flex items-center gap-2">
+                <Video className="w-6 h-6" />
+                <span className="font-bold text-lg tracking-tight">Minizoom</span>
+            </div>
+            <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                {systemInfo?.app_version ? `v${systemInfo.app_version}` : 'v1.2.0'}
+            </span>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
             <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-blue-600/10 text-blue-400 font-medium' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
@@ -205,6 +217,9 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 text-blue-400">
                 <Video className="w-6 h-6" />
                 <span className="font-bold text-lg tracking-tight">Minizoom</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                    {systemInfo?.app_version ? `v${systemInfo.app_version}` : 'v1.2.0'}
+                </span>
             </div>
             <button onClick={() => { localStorage.removeItem('token'); router.push('/'); }} className="p-2 text-red-400">
               <LogOut className="w-5 h-5" />
@@ -406,6 +421,61 @@ export default function Dashboard() {
                             <h1 className="text-2xl font-bold flex items-center gap-3">
                                 <Settings className="w-6 h-6 text-orange-500" /> System Settings
                             </h1>
+                            {systemInfo && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Version v{systemInfo.app_version} ({systemInfo.build_date})
+                                </div>
+                            )}
+                        </div>
+
+                        {/* System Status & Health Card */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                            <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
+                                <div className="flex items-center gap-2.5">
+                                    <Server className="w-5 h-5 text-blue-400" />
+                                    <h2 className="text-lg font-semibold text-slate-200">App Version & Environment Status</h2>
+                                </div>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    System Active
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+                                    <p className="text-xs text-slate-400 font-medium">Application Release</p>
+                                    <p className="text-base font-bold text-slate-100 mt-1 font-mono">
+                                        v{systemInfo?.app_version || '1.2.0'}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">Build Date: {systemInfo?.build_date || '2026-08-28'}</p>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+                                    <p className="text-xs text-slate-400 font-medium">LiveKit SFU Mode</p>
+                                    <p className="text-base font-bold text-indigo-400 mt-1 flex items-center gap-1.5 truncate">
+                                        <Activity className="w-4 h-4 shrink-0" />
+                                        <span className="truncate">{systemInfo?.livekit_mode || 'Connecting...'}</span>
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">{systemInfo?.livekit_url || 'ws://...'}</p>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 sm:col-span-2">
+                                    <p className="text-xs text-slate-400 font-medium mb-2">Active Features & Modules</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(systemInfo?.features || [
+                                            "Persistent Database Volume",
+                                            "Host Meeting Controls",
+                                            "Browser Screen Recorder",
+                                            "LiveKit Cloud SFU"
+                                        ]).map((feat: string, idx: number) => (
+                                            <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                                                <ShieldCheck className="w-3 h-3 text-blue-400" />
+                                                {feat}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <form onSubmit={saveSettings} className="space-y-6">

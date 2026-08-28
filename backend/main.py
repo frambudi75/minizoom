@@ -13,7 +13,29 @@ import discord_service
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Minizoom API")
+app = FastAPI(title="Minizoom API", version="1.2.0")
+
+APP_VERSION = "1.2.0"
+BUILD_DATE = "2026-08-28"
+
+@app.get("/api/system/status")
+def get_system_status():
+    livekit_url = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+    is_cloud = "livekit.cloud" in livekit_url
+    return {
+        "status": "online",
+        "app_version": APP_VERSION,
+        "build_date": BUILD_DATE,
+        "livekit_mode": "LiveKit Cloud (SFU)" if is_cloud else "Self-Hosted / Local SFU",
+        "livekit_url": livekit_url.split("?")[0],
+        "database": "SQLite WAL (Persistent Volume)",
+        "features": [
+            "Persistent Data Volume (/app/data)",
+            "Host Controls (Mute/Video/Kick)",
+            "Browser Screen & Audio Recording (.webm)",
+            "Dynamic LiveKit Cloud WebRTC SFU"
+        ]
+    }
 
 app.add_middleware(
     CORSMiddleware,
