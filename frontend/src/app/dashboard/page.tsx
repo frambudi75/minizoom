@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Video, Users, CheckCircle, Plus, LogOut, Calendar, Clock, LayoutDashboard, Trash2, Settings, Server, ShieldCheck, Activity } from 'lucide-react';
+import { Video, Users, CheckCircle, Plus, LogOut, Calendar, Clock, LayoutDashboard, Trash2, Settings, Server, ShieldCheck, Activity, Sparkles } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
