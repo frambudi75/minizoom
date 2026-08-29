@@ -35,7 +35,7 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     container_name: minizoom_livekit
-    command: --dev --keys devkey:secret
+    command: ["--dev", "--keys", "devkey: secret"]
     ports:
       - "7880:7880"
       - "7881:7881"
