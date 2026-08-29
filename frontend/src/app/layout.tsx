@@ -6,7 +6,14 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Minizoom - Premium Video Conferencing",
-  description: "Seamless, high-quality video meetings.",
+  description: "Seamless, high-quality, ultra low-latency video meetings.",
+  manifest: "/manifest.json",
+  themeColor: "#020617",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Minizoom",
+  },
 };
 
 export default function RootLayout({

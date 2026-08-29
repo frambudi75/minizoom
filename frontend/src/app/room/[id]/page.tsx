@@ -36,15 +36,103 @@ import {
   CheckCircle,
   Volume2,
   Camera,
-  Settings
+  Settings,
+  PenTool,
+  Vote,
+  FileText,
+  Download,
+  Trash2,
+  Plus,
+  Palette,
+  Eraser,
+  X,
+  Volume1
 } from 'lucide-react';
+
+// ================= Web Audio API Sound Synthesizer =================
+class SoundSynthesizer {
+  private ctx: AudioContext | null = null;
+  public enabled: boolean = true;
+
+  private init() {
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) this.ctx = new AudioContextClass();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  playJoin() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.15); // G5
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } catch {}
+  }
+
+  playLeave() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, now); // E5
+      osc.frequency.exponentialRampToValueAtTime(392.0, now + 0.18); // G4
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } catch {}
+  }
+
+  playChat() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, now); // A5
+      osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.08); // D6
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {}
+  }
+}
+
+const sounds = new SoundSynthesizer();
 
 // ================= Floating Reactions Overlay =================
 interface FloatingEmoji {
   id: string;
   emoji: string;
   sender: string;
-  left: number; // percentage across screen
+  left: number;
 }
 
 function ReactionOverlay() {
@@ -60,7 +148,7 @@ function ReactionOverlay() {
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           emoji: data.emoji,
           sender: data.sender || participant?.name || 'Someone',
-          left: Math.floor(Math.random() * 60) + 20, // 20% to 80%
+          left: Math.floor(Math.random() * 60) + 20,
         };
         setEmojis((prev) => [...prev, newEmoji]);
         setTimeout(() => {
@@ -96,7 +184,6 @@ function ReactionOverlay() {
   );
 }
 
-// ================= Reaction Picker =================
 const REACTION_EMOJIS = ['👍', '❤️', '👏', '😂', '🎉', '🔥', '🚀'];
 
 function ReactionPicker() {
@@ -120,21 +207,8 @@ function ReactionPicker() {
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border shadow-sm ${
-          open
-            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-            : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
-        }`}
-        title="Send Reaction"
-      >
-        <Smile className="w-4 h-4 text-amber-400" />
-        <span className="hidden sm:inline">React</span>
-      </button>
-
       {open && (
-        <div className="absolute bottom-full right-0 mb-2 p-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl flex gap-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute bottom-full mb-2 right-0 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2 shadow-2xl flex gap-1 z-50 animate-in fade-in slide-in-from-bottom-2">
           {REACTION_EMOJIS.map((emoji) => (
             <button
               key={emoji}
@@ -142,38 +216,312 @@ function ReactionPicker() {
                 sendReaction(emoji);
                 setOpen(false);
               }}
-              className="text-xl p-2 hover:bg-slate-800 rounded-xl transition-transform hover:scale-125 active:scale-95"
+              className="text-xl p-1.5 hover:scale-125 transition-transform hover:bg-slate-800 rounded-xl"
             >
               {emoji}
             </button>
           ))}
         </div>
       )}
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-xs font-semibold text-slate-300 transition-colors shadow-sm"
+        title="Send Floating Reaction"
+      >
+        <Smile className="w-4 h-4 text-amber-400" />
+        <span className="hidden sm:inline">React</span>
+      </button>
     </div>
   );
 }
 
-// ================= Custom Participant & Chat Sidebar Component =================
+// ================= Collaborative Interactive Whiteboard =================
+function WhiteboardModal({ isOpen, onClose }: { isOpen: boolean; onClose: boolean | any }) {
+  const room = useRoomContext();
+  const { localParticipant } = useLocalParticipant();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawing = useRef(false);
+  const [color, setColor] = useState('#3b82f6');
+  const [lineWidth, setLineWidth] = useState(4);
+  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+
+  const COLORS = ['#ffffff', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7'];
+
+  const drawLine = useCallback((x0: number, y0: number, x1: number, y1: number, strokeColor: string, size: number, emit = false) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = size;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.closePath();
+
+    if (emit && localParticipant) {
+      try {
+        const payload = JSON.stringify({
+          type: 'wb_draw',
+          x0: x0 / canvas.width,
+          y0: y0 / canvas.height,
+          x1: x1 / canvas.width,
+          y1: y1 / canvas.height,
+          color: strokeColor,
+          size,
+        });
+        localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+      } catch {}
+    }
+  }, [localParticipant]);
+
+  const clearCanvas = useCallback((emit = false) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (emit && localParticipant) {
+      try {
+        const payload = JSON.stringify({ type: 'wb_clear' });
+        localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+      } catch {}
+    }
+  }, [localParticipant]);
+
+  // Handle incoming draw data
+  useEffect(() => {
+    if (!room) return;
+    const handleData = (payload: Uint8Array) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+        if (data.type === 'wb_draw' && canvasRef.current) {
+          const w = canvasRef.current.width;
+          const h = canvasRef.current.height;
+          drawLine(data.x0 * w, data.y0 * h, data.x1 * w, data.y1 * h, data.color, data.size, false);
+        } else if (data.type === 'wb_clear') {
+          clearCanvas(false);
+        }
+      } catch {}
+    };
+    room.on(RoomEvent.DataReceived, handleData);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleData);
+    };
+  }, [room, drawLine, clearCanvas]);
+
+  // Handle Canvas Resize
+  useEffect(() => {
+    if (!isOpen || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+  }, [isOpen]);
+
+  const lastPos = useRef({ x: 0, y: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    lastPos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    isDrawing.current = true;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    const strokeColor = tool === 'eraser' ? '#0f172a' : color;
+    const size = tool === 'eraser' ? lineWidth * 3 : lineWidth;
+
+    drawLine(lastPos.current.x, lastPos.current.y, currentX, currentY, strokeColor, size, true);
+    lastPos.current = { x: currentX, y: currentY };
+  };
+
+  const handleMouseUp = () => {
+    isDrawing.current = false;
+  };
+
+  const downloadWhiteboard = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `Minizoom-Whiteboard-${Date.now()}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        {/* Whiteboard Header & Toolbar */}
+        <div className="px-5 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <PenTool className="w-5 h-5 text-blue-400" />
+            <h3 className="text-sm font-bold text-slate-100">Interactive Whiteboard</h3>
+            <span className="text-[11px] px-2 py-0.5 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded-full font-mono">
+              Live Sync
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Color Selectors */}
+            <div className="flex items-center gap-1.5 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => {
+                    setColor(c);
+                    setTool('pen');
+                  }}
+                  className={`w-5 h-5 rounded-full transition-transform ${color === c && tool === 'pen' ? 'scale-125 ring-2 ring-blue-400' : 'hover:scale-110'}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+
+            {/* Tools */}
+            <button
+              onClick={() => setTool('pen')}
+              className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1 border transition-colors ${tool === 'pen' ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+              title="Pen Tool"
+            >
+              <PenTool className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setTool('eraser')}
+              className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1 border transition-colors ${tool === 'eraser' ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+              title="Eraser Tool"
+            >
+              <Eraser className="w-4 h-4" />
+            </button>
+
+            {/* Clear & Download */}
+            <button
+              onClick={() => clearCanvas(true)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-red-500/20 border border-slate-700 hover:border-red-500/40 text-slate-300 hover:text-red-400 transition-colors"
+              title="Clear Canvas"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={downloadWhiteboard}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors"
+              title="Download PNG"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors ml-2"
+              title="Close Whiteboard"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Canvas Area */}
+        <div className="flex-1 bg-slate-950 relative overflow-hidden cursor-crosshair">
+          <canvas
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            className="w-full h-full block"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= Custom Participant & Collaboration Sidebar =================
+interface PollOption {
+  id: number;
+  text: string;
+  votes: string[]; // participant identities
+}
+
+interface Poll {
+  id: string;
+  question: string;
+  options: PollOption[];
+  creator: string;
+  active: boolean;
+}
+
 function ParticipantSidebar({
   roomId,
   livekitToken,
   initialIsLocked = false,
+  onOpenWhiteboard,
 }: {
   roomId: string;
   livekitToken: string;
   initialIsLocked?: boolean;
+  onOpenWhiteboard: () => void;
 }) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const { chatMessages, send, isSending } = useChat();
+  const room = useRoomContext();
 
-  const [activeTab, setActiveTab] = useState<'participants' | 'chat'>('participants');
+  const [activeTab, setActiveTab] = useState<'participants' | 'chat' | 'polls' | 'notes'>('participants');
   const [chatInput, setChatInput] = useState('');
   const [unreadChat, setUnreadChat] = useState(0);
   const [isLocked, setIsLocked] = useState(initialIsLocked);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Cek apakah user ini host/superadmin dari LiveKit token
+  // Polls State
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [newPollQuestion, setNewPollQuestion] = useState('');
+  const [newPollOptions, setNewPollOptions] = useState(['', '']);
+  const [isCreatingPoll, setIsCreatingPoll] = useState(false);
+
+  // Shared Notes State
+  const [notes, setNotes] = useState('');
+  const notesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const prevParticipantCount = useRef(participants.length);
+
+  // Participant Chimes
+  useEffect(() => {
+    if (participants.length > prevParticipantCount.current) {
+      sounds.playJoin();
+    } else if (participants.length < prevParticipantCount.current) {
+      sounds.playLeave();
+    }
+    prevParticipantCount.current = participants.length;
+  }, [participants.length]);
+
+  // Chat Chimes & Unread
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      setUnreadChat(0);
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      if (chatMessages.length > 0) {
+        setUnreadChat((prev) => prev + 1);
+        sounds.playChat();
+      }
+    }
+  }, [chatMessages.length, activeTab]);
+
   const isHost = (() => {
     if (!livekitToken) return false;
     try {
@@ -184,7 +532,6 @@ function ParticipantSidebar({
     }
   })();
 
-  // Status Raise Hand user lokal
   const isLocalHandRaised = (() => {
     try {
       return JSON.parse(localParticipant?.metadata || '{}')?.isHandRaised === true;
@@ -195,19 +542,44 @@ function ParticipantSidebar({
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Track unread messages saat tab bukan chat
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      setUnreadChat(0);
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      if (chatMessages.length > 0) {
-        setUnreadChat((prev) => prev + 1);
+  // Handle Incoming Data for Polls & Notes
+  const handleIncomingData = useCallback((payload: Uint8Array) => {
+    try {
+      const text = new TextDecoder().decode(payload);
+      const data = JSON.parse(text);
+      if (data.type === 'poll_new') {
+        setPolls((prev) => [data.poll, ...prev.filter((p) => p.id !== data.poll.id)]);
+      } else if (data.type === 'poll_vote') {
+        setPolls((prev) =>
+          prev.map((p) => {
+            if (p.id !== data.pollId) return p;
+            return {
+              ...p,
+              options: p.options.map((opt) => {
+                const cleanedVotes = opt.votes.filter((id) => id !== data.voter);
+                if (opt.id === data.optionId) {
+                  return { ...opt, votes: [...cleanedVotes, data.voter] };
+                }
+                return { ...opt, votes: cleanedVotes };
+              }),
+            };
+          })
+        );
+      } else if (data.type === 'notes_sync') {
+        setNotes(data.content);
       }
-    }
-  }, [chatMessages.length, activeTab]);
+    } catch {}
+  }, []);
 
-  // ================= Host Browser Screen & Audio Recorder =================
+  useEffect(() => {
+    if (!room) return;
+    room.on(RoomEvent.DataReceived, handleIncomingData);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleIncomingData);
+    };
+  }, [room, handleIncomingData]);
+
+  // Host Screen Recorder
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -319,7 +691,6 @@ function ParticipantSidebar({
       setIsRecording(true);
     } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
-        console.error('Recording error:', err);
         alert('Gagal memulai perekaman: ' + (err.message || 'Izin ditolak'));
       }
     }
@@ -331,22 +702,16 @@ function ParticipantSidebar({
     }
   };
 
-  // ================= Host Controls =================
+  // Host Actions
   const handleMute = async (identity: string) => {
     const token = localStorage.getItem('token');
     if (!token) return;
     setActionLoading(`mute-${identity}`);
     try {
-      const res = await fetch(`/api/meetings/${roomId}/mute/${identity}`, {
+      await fetch(`/api/meetings/${roomId}/mute/${identity}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(`Gagal mute: ${data.detail || 'Terjadi kesalahan'}`);
-      }
-    } catch (err) {
-      alert('Gagal menghubungi server untuk mute peserta.');
     } finally {
       setActionLoading(null);
     }
@@ -358,16 +723,10 @@ function ParticipantSidebar({
     if (!token) return;
     setActionLoading('mute-all');
     try {
-      const res = await fetch(`/api/meetings/${roomId}/mute-all`, {
+      await fetch(`/api/meetings/${roomId}/mute-all`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(`Gagal mute all: ${data.detail || 'Terjadi kesalahan'}`);
-      }
-    } catch (err) {
-      alert('Gagal menghubungi server.');
     } finally {
       setActionLoading(null);
     }
@@ -386,29 +745,21 @@ function ParticipantSidebar({
         const data = await res.json();
         setIsLocked(data.is_locked);
       }
-    } catch (err) {
-      alert('Gagal mengubah status kunci ruangan.');
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleKick = async (identity: string) => {
-    if (!confirm('Yakin ingin mengeluarkan peserta ini dari meeting?')) return;
+    if (!confirm('Keluarkan peserta ini dari meeting?')) return;
     const token = localStorage.getItem('token');
     if (!token) return;
     setActionLoading(`kick-${identity}`);
     try {
-      const res = await fetch(`/api/meetings/${roomId}/kick/${identity}`, {
+      await fetch(`/api/meetings/${roomId}/kick/${identity}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(`Gagal kick: ${data.detail || 'Terjadi kesalahan'}`);
-      }
-    } catch (err) {
-      alert('Gagal menghubungi server untuk kick peserta.');
     } finally {
       setActionLoading(null);
     }
@@ -419,34 +770,24 @@ function ParticipantSidebar({
     if (!token) return;
     setActionLoading(`video-${identity}`);
     try {
-      const res = await fetch(`/api/meetings/${roomId}/video-off/${identity}`, {
+      await fetch(`/api/meetings/${roomId}/video-off/${identity}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(`Gagal matikan video: ${data.detail || 'Terjadi kesalahan'}`);
-      }
-    } catch (err) {
-      alert('Gagal menghubungi server untuk matikan video peserta.');
     } finally {
       setActionLoading(null);
     }
   };
 
-  // ================= Raise Hand =================
   const handleToggleRaiseHand = async () => {
     if (!localParticipant) return;
     try {
       const currentMeta = JSON.parse(localParticipant.metadata || '{}');
       const nextHand = !currentMeta.isHandRaised;
       await localParticipant.setMetadata(JSON.stringify({ ...currentMeta, isHandRaised: nextHand }));
-    } catch (err) {
-      console.error('Raise hand error:', err);
-    }
+    } catch {}
   };
 
-  // ================= Send Chat Message =================
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || isSending) return;
@@ -456,70 +797,185 @@ function ParticipantSidebar({
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-    } catch (err) {
-      console.error('Send chat error:', err);
+    } catch {}
+  };
+
+  // Polls Creation & Voting
+  const handleCreatePoll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPollQuestion.trim() || !localParticipant) return;
+    const validOpts = newPollOptions.filter((o) => o.trim() !== '');
+    if (validOpts.length < 2) {
+      alert('Minimal masukkan 2 pilihan opsi polling.');
+      return;
     }
+
+    const poll: Poll = {
+      id: `poll-${Date.now()}`,
+      question: newPollQuestion.trim(),
+      options: validOpts.map((text, idx) => ({ id: idx, text, votes: [] })),
+      creator: localParticipant.name || 'Host',
+      active: true,
+    };
+
+    setPolls((prev) => [poll, ...prev]);
+    setIsCreatingPoll(false);
+    setNewPollQuestion('');
+    setNewPollOptions(['', '']);
+
+    try {
+      const payload = JSON.stringify({ type: 'poll_new', poll });
+      await localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+    } catch {}
+  };
+
+  const handleVote = async (pollId: string, optionId: number) => {
+    if (!localParticipant) return;
+    const myId = localParticipant.identity;
+
+    setPolls((prev) =>
+      prev.map((p) => {
+        if (p.id !== pollId) return p;
+        return {
+          ...p,
+          options: p.options.map((opt) => {
+            const cleanedVotes = opt.votes.filter((id) => id !== myId);
+            if (opt.id === optionId) {
+              return { ...opt, votes: [...cleanedVotes, myId] };
+            }
+            return { ...opt, votes: cleanedVotes };
+          }),
+        };
+      })
+    );
+
+    try {
+      const payload = JSON.stringify({ type: 'poll_vote', pollId, optionId, voter: myId });
+      await localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+    } catch {}
+  };
+
+  // Notes Sync
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setNotes(text);
+    if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    notesTimeoutRef.current = setTimeout(async () => {
+      if (localParticipant) {
+        try {
+          const payload = JSON.stringify({ type: 'notes_sync', content: text });
+          await localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+        } catch {}
+      }
+    }, 500);
+  };
+
+  const exportNotes = () => {
+    const blob = new Blob([notes], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Minizoom-Notes-${roomId}.txt`;
+    a.click();
   };
 
   return (
-    <div className="w-full md:w-80 bg-[#1e1e1e] border-t md:border-t-0 md:border-l border-slate-800 flex flex-col h-[45vh] md:h-full overflow-hidden z-10 shrink-0">
-      {/* Sidebar Tabs */}
-      <div className="flex border-b border-slate-800 bg-slate-900/50">
+    <div className="w-full md:w-84 bg-slate-900/95 backdrop-blur-md border-t md:border-t-0 md:border-l border-slate-800 flex flex-col h-[48vh] md:h-full overflow-hidden z-10 shrink-0">
+      {/* Tab Navigation */}
+      <div className="flex border-b border-slate-800 bg-slate-950/60 p-1 gap-1">
         <button
           onClick={() => setActiveTab('participants')}
-          className={`flex-1 py-3 px-4 text-xs font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
+          className={`flex-1 py-2 px-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 rounded-lg transition-all ${
             activeTab === 'participants'
-              ? 'border-indigo-500 text-indigo-400 bg-slate-800/40'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
           }`}
+          title="Daftar Peserta"
         >
-          <Users className="w-4 h-4" />
-          Participants ({participants.length})
+          <Users className="w-3.5 h-3.5" />
+          <span>({participants.length})</span>
         </button>
+
         <button
           onClick={() => setActiveTab('chat')}
-          className={`flex-1 py-3 px-4 text-xs font-semibold flex items-center justify-center gap-2 border-b-2 transition-all relative ${
+          className={`flex-1 py-2 px-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 rounded-lg transition-all relative ${
             activeTab === 'chat'
-              ? 'border-indigo-500 text-indigo-400 bg-slate-800/40'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
           }`}
+          title="Live Chat"
         >
-          <MessageSquare className="w-4 h-4" />
-          In-Meeting Chat
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>Chat</span>
           {unreadChat > 0 && activeTab !== 'chat' && (
-            <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold animate-pulse">
+            <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[9px] flex items-center justify-center font-bold animate-pulse">
               {unreadChat}
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveTab('polls')}
+          className={`flex-1 py-2 px-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 rounded-lg transition-all ${
+            activeTab === 'polls'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+          }`}
+          title="Live Polls"
+        >
+          <Vote className="w-3.5 h-3.5" />
+          <span>Polls</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('notes')}
+          className={`flex-1 py-2 px-2 text-[11px] font-semibold flex items-center justify-center gap-1.5 rounded-lg transition-all ${
+            activeTab === 'notes'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+          }`}
+          title="Shared Meeting Notes"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Notes</span>
+        </button>
       </div>
 
-      {/* Content Area */}
-      {activeTab === 'participants' ? (
+      {/* Participants Tab */}
+      {activeTab === 'participants' && (
         <div className="flex-1 p-4 overflow-y-auto space-y-4">
-          {/* Quick Interactive Actions (Raise Hand + Reactions) */}
+          {/* Quick Interactive Actions */}
           <div className="flex gap-2">
             <button
               onClick={handleToggleRaiseHand}
               className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all border shadow-sm ${
                 isLocalHandRaised
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
-                  : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
+                  : 'bg-slate-800/80 text-slate-300 border-slate-700/60 hover:bg-slate-700'
               }`}
             >
               <Hand className={`w-4 h-4 ${isLocalHandRaised ? 'text-amber-400' : ''}`} />
               {isLocalHandRaised ? 'Lower Hand ✋' : 'Raise Hand ✋'}
             </button>
-            <ReactionPicker />
+
+            <button
+              onClick={onOpenWhiteboard}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition-all"
+              title="Open Whiteboard"
+            >
+              <PenTool className="w-4 h-4 text-blue-400" />
+              <span>Whiteboard</span>
+            </button>
           </div>
 
-          {/* Host Meeting Controls Card */}
+          {/* Host Controls */}
           {isHost && (
-            <div className="p-3.5 bg-slate-900/90 border border-slate-700/70 rounded-2xl shadow-lg space-y-3">
+            <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-2xl shadow-lg space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-blue-400">
                   <Sparkles className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Host Controls</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    Host Controls
+                  </span>
                 </div>
                 <button
                   onClick={handleToggleLock}
@@ -529,7 +985,7 @@ function ParticipantSidebar({
                       ? 'bg-red-500/20 text-red-400 border-red-500/30'
                       : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   }`}
-                  title={isLocked ? 'Room is locked. Click to unlock' : 'Room is open. Click to lock'}
+                  title={isLocked ? 'Kunci aktif. Klik untuk buka' : 'Ruangan terbuka. Klik untuk kunci'}
                 >
                   {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                   {isLocked ? 'Locked' : 'Open'}
@@ -540,7 +996,7 @@ function ParticipantSidebar({
                 <button
                   onClick={handleMuteAll}
                   disabled={actionLoading === 'mute-all'}
-                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 text-xs font-semibold transition-all disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-amber-400 border border-slate-700/60 text-xs font-semibold transition-all disabled:opacity-50"
                 >
                   <VolumeX className="w-3.5 h-3.5" />
                   Mute All
@@ -567,8 +1023,26 @@ function ParticipantSidebar({
             </div>
           )}
 
+          {/* Sound Notification Toggle */}
+          <div className="flex items-center justify-between px-3 py-2 bg-slate-950/40 border border-slate-800/80 rounded-xl text-xs text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <Volume1 className="w-3.5 h-3.5 text-slate-400" />
+              Notification Chimes
+            </span>
+            <button
+              onClick={() => {
+                const next = !soundEnabled;
+                setSoundEnabled(next);
+                sounds.enabled = next;
+              }}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-colors ${soundEnabled ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-slate-800 text-slate-500 border-slate-700'}`}
+            >
+              {soundEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
           {/* Participants List */}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2">
             {participants.map((p) => {
               const isHandUp = (() => {
                 try {
@@ -581,10 +1055,10 @@ function ParticipantSidebar({
               return (
                 <div
                   key={p.identity}
-                  className={`flex flex-col gap-2 bg-[#2d2d2d] p-3 rounded-xl border transition-all ${
+                  className={`flex flex-col gap-2 bg-slate-950/60 p-3 rounded-2xl border transition-all ${
                     isHandUp
                       ? 'border-amber-500/60 ring-1 ring-amber-500/40 bg-amber-950/20'
-                      : 'border-slate-700/50'
+                      : 'border-slate-800/80'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -613,30 +1087,30 @@ function ParticipantSidebar({
                     </div>
                   </div>
                   {isHost && !p.isLocal && (
-                    <div className="flex gap-2 mt-1">
+                    <div className="flex gap-1.5 mt-1">
                       <button
                         onClick={() => handleMute(p.identity)}
                         disabled={actionLoading === `mute-${p.identity}`}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 disabled:opacity-50 px-2 py-1.5 rounded-md transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1 text-[11px] bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 disabled:opacity-50 px-2 py-1.5 rounded-lg border border-amber-500/20 transition-colors"
                         title="Mute Microphone"
                       >
-                        <MicOff className="w-3 h-3" /> {actionLoading === `mute-${p.identity}` ? '...' : 'Mute'}
+                        <MicOff className="w-3 h-3" /> Mute
                       </button>
                       <button
                         onClick={() => handleVideoOff(p.identity)}
                         disabled={actionLoading === `video-${p.identity}`}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 disabled:opacity-50 px-2 py-1.5 rounded-md transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1 text-[11px] bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-50 px-2 py-1.5 rounded-lg border border-slate-700 transition-colors"
                         title="Turn Off Video"
                       >
-                        <VideoOff className="w-3 h-3" /> {actionLoading === `video-${p.identity}` ? '...' : 'Stop Vid'}
+                        <VideoOff className="w-3 h-3" /> Stop Vid
                       </button>
                       <button
                         onClick={() => handleKick(p.identity)}
                         disabled={actionLoading === `kick-${p.identity}`}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50 px-2 py-1.5 rounded-md transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1 text-[11px] bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50 px-2 py-1.5 rounded-lg border border-red-500/20 transition-colors"
                         title="Kick Participant"
                       >
-                        <UserMinus className="w-3 h-3" /> {actionLoading === `kick-${p.identity}` ? '...' : 'Kick'}
+                        <UserMinus className="w-3 h-3" /> Kick
                       </button>
                     </div>
                   )}
@@ -645,15 +1119,16 @@ function ParticipantSidebar({
             })}
           </div>
         </div>
-      ) : (
-        /* Chat Tab */
+      )}
+
+      {/* Chat Tab */}
+      {activeTab === 'chat' && (
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-          {/* Chat Messages List */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3">
             {chatMessages.length === 0 ? (
               <div className="text-center py-12 text-slate-500 text-xs">
                 <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                No messages yet. Say hello!
+                Belum ada pesan. Mulai obrolan sekarang!
               </div>
             ) : (
               chatMessages.map((msg, index) => {
@@ -675,8 +1150,8 @@ function ParticipantSidebar({
                     <div
                       className={`p-2.5 rounded-2xl text-xs max-w-[88%] break-words shadow-sm leading-relaxed ${
                         isMe
-                          ? 'bg-indigo-600 text-white rounded-br-xs'
-                          : 'bg-slate-800 text-slate-200 rounded-bl-xs border border-slate-700/60'
+                          ? 'bg-blue-600 text-white rounded-br-xs'
+                          : 'bg-slate-950 text-slate-200 rounded-bl-xs border border-slate-800'
                       }`}
                     >
                       {msg.message}
@@ -688,42 +1163,193 @@ function ParticipantSidebar({
             <div ref={chatEndRef} />
           </div>
 
-          {/* Chat Input Form */}
-          <form
-            onSubmit={handleSendChat}
-            className="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center gap-2"
-          >
+          <form onSubmit={handleSendChat} className="p-3 border-t border-slate-800 bg-slate-950/60 flex items-center gap-2">
             <input
               type="text"
-              placeholder="Type a message..."
+              placeholder="Tulis pesan..."
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              className="flex-1 px-3.5 py-2.5 bg-slate-950/70 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <button
               type="submit"
               disabled={!chatInput.trim() || isSending}
-              className="p-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl transition-all shrink-0 active:scale-95"
-              title="Send message"
+              className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl transition-all shrink-0 active:scale-95"
             >
               <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
       )}
+
+      {/* Polls Tab */}
+      {activeTab === 'polls' && (
+        <div className="flex-1 p-4 overflow-y-auto space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <Vote className="w-4 h-4 text-blue-400" /> Live Polls
+            </h4>
+            {isHost && !isCreatingPoll && (
+              <button
+                onClick={() => setIsCreatingPoll(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Buat Poll
+              </button>
+            )}
+          </div>
+
+          {isCreatingPoll && (
+            <form onSubmit={handleCreatePoll} className="p-3.5 bg-slate-950 border border-blue-500/30 rounded-2xl space-y-3 animate-in fade-in">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">Pertanyaan</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Misal: Apakah setuju dengan jadwal ini?"
+                  value={newPollQuestion}
+                  onChange={(e) => setNewPollQuestion(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-300">Pilihan Opsi</label>
+                {newPollOptions.map((opt, idx) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    required
+                    placeholder={`Opsi ${idx + 1}`}
+                    value={opt}
+                    onChange={(e) => {
+                      const updated = [...newPollOptions];
+                      updated[idx] = e.target.value;
+                      setNewPollOptions(updated);
+                    }}
+                    className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                ))}
+              </div>
+
+              {newPollOptions.length < 4 && (
+                <button
+                  type="button"
+                  onClick={() => setNewPollOptions([...newPollOptions, ''])}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 font-medium"
+                >
+                  + Tambah Opsi
+                </button>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-sm"
+                >
+                  Launch Poll
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingPoll(false)}
+                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          )}
+
+          {polls.length === 0 && !isCreatingPoll && (
+            <div className="text-center py-10 text-slate-500 text-xs">
+              <Vote className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              Belum ada polling aktif saat ini.
+            </div>
+          )}
+
+          {polls.map((poll) => {
+            const totalVotes = poll.options.reduce((acc, opt) => acc + opt.votes.length, 0);
+            const myVote = poll.options.find((opt) => opt.votes.includes(localParticipant?.identity || ''))?.id;
+
+            return (
+              <div key={poll.id} className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                <div>
+                  <h5 className="text-xs font-bold text-slate-100">{poll.question}</h5>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Dibuat oleh {poll.creator} • {totalVotes} Suara</p>
+                </div>
+
+                <div className="space-y-2">
+                  {poll.options.map((opt) => {
+                    const percentage = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
+                    const isSelected = myVote === opt.id;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleVote(poll.id, opt.id)}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-all relative overflow-hidden ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-600/10'
+                            : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                        }`}
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 bg-blue-500/15 transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                        <div className="relative flex items-center justify-between text-xs">
+                          <span className="font-medium text-slate-200 truncate">{opt.text}</span>
+                          <span className="font-mono text-slate-400 text-[11px] shrink-0 ml-2">{percentage}%</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Shared Notes Tab */}
+      {activeTab === 'notes' && (
+        <div className="flex-1 flex flex-col p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-blue-400" /> Shared Meeting Notes
+            </h4>
+            <button
+              onClick={exportNotes}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition-colors"
+              title="Download Notes as TXT"
+            >
+              <Download className="w-3.5 h-3.5" /> Export
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 mb-2">Notulensi tersinkronisasi otomatis antar semua peserta meeting.</p>
+          <textarea
+            value={notes}
+            onChange={handleNotesChange}
+            placeholder="Tulis ringkasan hasil rapat, agenda, atau todo list di sini..."
+            className="flex-1 w-full p-3.5 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none font-mono leading-relaxed"
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-// ================= Room Header with Low Data Mode =================
+// ================= Room Header Component =================
 function RoomHeader({
   roomId,
   lowDataMode,
   setLowDataMode,
+  onOpenWhiteboard,
 }: {
   roomId: string;
   lowDataMode: boolean;
-  setLowDataMode: (val: boolean) => void;
+  setLowDataMode: (v: boolean) => void;
+  onOpenWhiteboard: () => void;
 }) {
   const participants = useParticipants();
   const [copied, setCopied] = useState(false);
@@ -739,7 +1365,7 @@ function RoomHeader({
   };
 
   return (
-    <div className="h-12 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 z-10 shrink-0">
+    <div className="h-12 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 z-10 shrink-0">
       <div className="flex items-center gap-2.5 overflow-hidden">
         <div className="flex items-center gap-1.5 font-semibold text-slate-200">
           <span className="relative flex h-2 w-2">
@@ -747,7 +1373,7 @@ function RoomHeader({
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="hidden sm:inline">Room:</span>
-          <span className="font-mono text-slate-200 truncate max-w-[100px] sm:max-w-[200px]">{roomId}</span>
+          <span className="font-mono text-blue-400 truncate max-w-[110px] sm:max-w-[200px]">{roomId}</span>
         </div>
         <button
           onClick={handleCopy}
@@ -757,27 +1383,37 @@ function RoomHeader({
         </button>
       </div>
 
-      <div className="flex items-center gap-2.5 shrink-0">
-        {/* Low-Data Mode Optimizer Button */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Whiteboard Button */}
         <button
-          onClick={() => setLowDataMode(!lowDataMode)}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
-            lowDataMode
-              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 ring-1 ring-amber-500/30'
-              : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
-          }`}
-          title={
-            lowDataMode
-              ? 'Low-Data Mode active: Lower video resolution to save bandwidth'
-              : 'Click to enable Low-Data Mode for unstable connections'
-          }
+          onClick={onOpenWhiteboard}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-blue-400 border border-slate-700 text-xs font-semibold transition-colors"
+          title="Open Interactive Whiteboard"
         >
-          <Wifi className={`w-3.5 h-3.5 ${lowDataMode ? 'text-amber-400' : ''}`} />
-          <span className="hidden sm:inline">{lowDataMode ? 'Low Data (On)' : 'Normal Data'}</span>
+          <PenTool className="w-3.5 h-3.5" />
+          <span>Whiteboard</span>
         </button>
 
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-semibold font-mono text-xs shadow-sm">
-          <Users className="w-3.5 h-3.5 text-indigo-400" />
+        {/* Low Data Mode Toggle */}
+        <button
+          onClick={() => setLowDataMode(!lowDataMode)}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+            lowDataMode
+              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-300'
+          }`}
+          title={lowDataMode ? 'Mode Hemat Kuota Aktif' : 'Aktifkan Mode Hemat Kuota'}
+        >
+          <Wifi className="w-3 h-3" />
+          <span className="hidden sm:inline">{lowDataMode ? 'Low-Data: ON' : 'Low-Data'}</span>
+        </button>
+
+        {/* Emoji Reactions Picker */}
+        <ReactionPicker />
+
+        {/* Real-time Participant Count */}
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold font-mono text-xs shadow-sm">
+          <Users className="w-3.5 h-3.5 text-blue-400" />
           <span>{participants.length} Peserta</span>
         </span>
       </div>
@@ -785,360 +1421,165 @@ function RoomHeader({
   );
 }
 
-// ================= Pre-Join Lobby (Audio & Video Test Screen) =================
-interface PreJoinProps {
-  roomId: string;
-  initialName?: string;
-  initialInstitution?: string;
-  isLoggedIn: boolean;
-  onJoin: (settings: { micEnabled: boolean; videoEnabled: boolean; name?: string; institution?: string }) => void;
-}
-
-function PreJoinLobby({ roomId, initialName = '', initialInstitution = '', isLoggedIn, onJoin }: PreJoinProps) {
+// ================= Pre-Join Lobby Component =================
+function PreJoinLobby({
+  userName,
+  onJoin,
+}: {
+  userName: string;
+  onJoin: (camEnabled: boolean, micEnabled: boolean) => void;
+}) {
+  const [camEnabled, setCamEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
-  const [videoEnabled, setVideoEnabled] = useState(true);
-  const [guestName, setGuestName] = useState(initialName);
-  const [guestInstitution, setGuestInstitution] = useState(initialInstitution);
-  const [micLevel, setMicLevel] = useState(0);
-
-  // Device selections
-  const [audioInputDevices, setAudioInputDevices] = useState<MediaDeviceInfo[]>([]);
-  const [videoInputDevices, setVideoInputDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedAudioId, setSelectedAudioId] = useState<string>('');
-  const [selectedVideoId, setSelectedVideoId] = useState<string>('');
-  const [showSettings, setShowSettings] = useState(false);
-
+  const [volumeLevel, setVolumeLevel] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // Setup preview stream
-  const startPreview = async () => {
-    // Stop old stream
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-    }
+  useEffect(() => {
+    let active = true;
 
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: selectedAudioId ? { deviceId: { exact: selectedAudioId } } : true,
-        video: selectedVideoId ? { deviceId: { exact: selectedVideoId } } : { width: { ideal: 1280 }, height: { ideal: 720 } },
-      };
+    async function initMedia() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
-      // Audio Meter
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const audioCtx = new AudioContextClass();
-      audioCtxRef.current = audioCtx;
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
-        const source = audioCtx.createMediaStreamSource(new MediaStream([audioTrack]));
+        // Setup audio level meter
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioContextClass();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
         source.connect(analyser);
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const updateMeter = () => {
+        const checkVolume = () => {
           analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
+          const sum = dataArray.reduce((a, b) => a + b, 0);
           const avg = sum / dataArray.length;
-          setMicLevel(Math.min(100, Math.round((avg / 128) * 100)));
-          animFrameRef.current = requestAnimationFrame(updateMeter);
+          setVolumeLevel(Math.min(100, Math.round((avg / 128) * 100)));
+          animFrameRef.current = requestAnimationFrame(checkVolume);
         };
-        updateMeter();
+        checkVolume();
+      } catch (err) {
+        console.warn('Lobby camera/mic access failed:', err);
       }
-
-      // Enumerate available devices
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      setAudioInputDevices(devices.filter((d) => d.kind === 'audioinput'));
-      setVideoInputDevices(devices.filter((d) => d.kind === 'videoinput'));
-    } catch (err) {
-      console.warn('Lobby camera/mic preview permission denied or unavailable:', err);
     }
+
+    initMedia();
+
+    return () => {
+      active = false;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (audioCtxRef.current) audioCtxRef.current.close();
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const toggleCam = () => {
+    if (streamRef.current) {
+      streamRef.current.getVideoTracks().forEach((t) => (t.enabled = !camEnabled));
+    }
+    setCamEnabled(!camEnabled);
   };
 
-  useEffect(() => {
-    startPreview();
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close();
-      }
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [selectedAudioId, selectedVideoId]);
-
-  // Toggle video track on/off in preview
-  useEffect(() => {
+  const toggleMic = () => {
     if (streamRef.current) {
-      streamRef.current.getVideoTracks().forEach((t) => {
-        t.enabled = videoEnabled;
-      });
+      streamRef.current.getAudioTracks().forEach((t) => (t.enabled = !micEnabled));
     }
-  }, [videoEnabled]);
+    setMicEnabled(!micEnabled);
+  };
 
-  // Toggle audio track on/off in preview
-  useEffect(() => {
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach((t) => {
-        t.enabled = micEnabled;
-      });
-    }
-    if (!micEnabled) setMicLevel(0);
-  }, [micEnabled]);
-
-  const handleJoinClick = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isLoggedIn && !guestName.trim()) {
-      alert('Mohon isi nama lengkap Anda sebelum bergabung.');
-      return;
-    }
-
-    // Stop lobby stream before entering room
+  const handleEnterRoom = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
     }
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close();
-    }
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
-
-    onJoin({
-      micEnabled,
-      videoEnabled,
-      name: guestName,
-      institution: guestInstitution,
-    });
+    onJoin(camEnabled, micEnabled);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center py-8 px-4 sm:px-6 relative overflow-hidden">
-      {/* Glow effect */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-indigo-600/15 blur-[140px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="w-full max-w-4xl relative z-10 flex flex-col gap-6">
-        {/* Header */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            Pre-Join Lobby
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Ready to join the meeting?</h1>
-          <p className="text-sm text-slate-400 font-mono">Room ID: {roomId}</p>
-        </div>
+      <div className="w-full max-w-lg bg-slate-900/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl z-10 flex flex-col items-center">
+        <h2 className="text-xl font-bold text-slate-100 mb-1">Pre-Join Lobby</h2>
+        <p className="text-xs text-slate-400 mb-6 text-center">
+          Periksa kamera dan audio Anda sebelum bergabung ke meeting.
+        </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left: Video Preview & Audio Meter (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col gap-3">
-            <div className="relative aspect-video bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl flex items-center justify-center group">
-              {videoEnabled ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover transform -scale-x-100"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-slate-500">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold text-2xl">
-                    {guestName ? guestName.charAt(0).toUpperCase() : <VideoOff className="w-8 h-8 text-slate-600" />}
-                  </div>
-                  <span className="text-xs font-medium">Camera is turned off</span>
-                </div>
-              )}
-
-              {/* In-Preview Quick Toggles */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-950/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-700/60 shadow-xl">
-                <button
-                  type="button"
-                  onClick={() => setMicEnabled(!micEnabled)}
-                  className={`p-3 rounded-xl transition-all shadow-md active:scale-95 ${
-                    micEnabled
-                      ? 'bg-slate-800 hover:bg-slate-700 text-white'
-                      : 'bg-red-600 hover:bg-red-500 text-white'
-                  }`}
-                  title={micEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
-                >
-                  {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setVideoEnabled(!videoEnabled)}
-                  className={`p-3 rounded-xl transition-all shadow-md active:scale-95 ${
-                    videoEnabled
-                      ? 'bg-slate-800 hover:bg-slate-700 text-white'
-                      : 'bg-red-600 hover:bg-red-500 text-white'
-                  }`}
-                  title={videoEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
-                >
-                  {videoEnabled ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(!showSettings)}
-                  className={`p-3 rounded-xl transition-all shadow-md active:scale-95 ${
-                    showSettings ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                  }`}
-                  title="Device Settings"
-                >
-                  <Sliders className="w-5 h-5" />
-                </button>
-              </div>
+        {/* Video Preview Box */}
+        <div className="w-full aspect-video bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden relative flex items-center justify-center shadow-inner">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-cover -scale-x-100 ${!camEnabled ? 'hidden' : ''}`}
+          />
+          {!camEnabled && (
+            <div className="flex flex-col items-center text-slate-500">
+              <VideoOff className="w-12 h-12 mb-2 opacity-50" />
+              <span className="text-xs">Kamera Dimatikan</span>
             </div>
+          )}
 
-            {/* Mic Volume Level Visualizer */}
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-900/60 border border-slate-800/80 rounded-2xl">
-              <Volume2 className={`w-4 h-4 shrink-0 ${micEnabled ? 'text-emerald-400' : 'text-slate-600'}`} />
-              <div className="flex-1 flex gap-1 h-2 items-center bg-slate-950 rounded-full px-1 overflow-hidden">
-                <div
-                  className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 transition-all duration-75"
-                  style={{ width: `${micEnabled ? micLevel : 0}%` }}
-                />
-              </div>
-              <span className="text-[11px] font-mono text-slate-400 w-8 text-right">
-                {micEnabled ? `${micLevel}%` : 'Off'}
-              </span>
-            </div>
-
-            {/* Device Settings Drawer */}
-            {showSettings && (
-              <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-indigo-400" />
-                    Camera Device
-                  </label>
-                  <select
-                    value={selectedVideoId}
-                    onChange={(e) => setSelectedVideoId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700/60 rounded-xl text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {videoInputDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Camera (${d.deviceId.slice(0, 5)})`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Mic className="w-3.5 h-3.5 text-indigo-400" />
-                    Microphone Device
-                  </label>
-                  <select
-                    value={selectedAudioId}
-                    onChange={(e) => setSelectedAudioId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700/60 rounded-xl text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {audioInputDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Microphone (${d.deviceId.slice(0, 5)})`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: User Information & Join Action (5 cols) */}
-          <div className="lg:col-span-5 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-                {isLoggedIn ? 'Joining as Member' : 'Guest Registration'}
-              </h2>
-
-              {!isLoggedIn ? (
-                <form id="joinForm" onSubmit={handleJoinClick} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Your Full Name</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="text"
-                        required
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        placeholder="e.g. John Doe"
-                        className="w-full pl-10 pr-3 py-2.5 bg-slate-950/70 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Institution / Company (Optional)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                        <Building2 className="w-4 h-4" />
-                      </div>
-                      <input
-                        type="text"
-                        value={guestInstitution}
-                        onChange={(e) => setGuestInstitution(e.target.value)}
-                        placeholder="e.g. PT Maju Bersama"
-                        className="w-full pl-10 pr-3 py-2.5 bg-slate-950/70 border border-slate-700/60 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-                </form>
-              ) : (
-                <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 space-y-1">
-                  <p className="text-xs text-slate-400">Logged in account:</p>
-                  <p className="text-base font-bold text-slate-100">{initialName || 'Host / Registered User'}</p>
-                  <p className="text-xs text-emerald-400 font-medium">✓ Authentication verified</p>
-                </div>
-              )}
-
-              {/* Status summary */}
-              <div className="p-3 bg-slate-950/40 rounded-2xl border border-slate-800/50 space-y-1.5 text-xs text-slate-400">
-                <div className="flex justify-between">
-                  <span>Microphone:</span>
-                  <span className={micEnabled ? 'text-emerald-400 font-medium' : 'text-red-400'}>
-                    {micEnabled ? 'Unmuted' : 'Muted'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Camera:</span>
-                  <span className={videoEnabled ? 'text-emerald-400 font-medium' : 'text-red-400'}>
-                    {videoEnabled ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
+          {/* Floating Controls inside video */}
+          <div className="absolute bottom-3 flex items-center gap-3">
             <button
-              onClick={handleJoinClick}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-900/30 flex items-center justify-center gap-2 active:scale-95 hover:-translate-y-0.5"
+              onClick={toggleMic}
+              className={`p-3 rounded-full backdrop-blur-md transition-transform hover:scale-105 active:scale-95 shadow-lg ${
+                micEnabled ? 'bg-slate-800/90 text-slate-200 border border-slate-700' : 'bg-red-600 text-white'
+              }`}
+              title={micEnabled ? 'Mute Mic' : 'Unmute Mic'}
             >
-              <span>Join Meeting Now</span>
-              <ArrowRight className="w-4 h-4" />
+              {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={toggleCam}
+              className={`p-3 rounded-full backdrop-blur-md transition-transform hover:scale-105 active:scale-95 shadow-lg ${
+                camEnabled ? 'bg-slate-800/90 text-slate-200 border border-slate-700' : 'bg-red-600 text-white'
+              }`}
+              title={camEnabled ? 'Matikan Kamera' : 'Nyalakan Kamera'}
+            >
+              {camEnabled ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
             </button>
           </div>
         </div>
+
+        {/* Mic Volume Meter Bar */}
+        <div className="w-full mt-4 flex items-center gap-3 px-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl">
+          <Volume2 className={`w-4 h-4 ${micEnabled && volumeLevel > 5 ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-75 rounded-full ${volumeLevel > 50 ? 'bg-emerald-400' : 'bg-blue-500'}`}
+              style={{ width: `${micEnabled ? volumeLevel : 0}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono w-10 text-right">
+            {micEnabled ? `${volumeLevel}%` : 'Muted'}
+          </span>
+        </div>
+
+        {/* Enter Meeting Button */}
+        <button
+          onClick={handleEnterRoom}
+          className="mt-6 w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98] flex items-center justify-center gap-2"
+        >
+          <span>Masuk ke Meeting</span>
+          <ArrowRight className="w-5 h-5" />
+        </button>
       </div>
     </div>
   );
@@ -1148,129 +1589,180 @@ function PreJoinLobby({ roomId, initialName = '', initialInstitution = '', isLog
 export default function Room() {
   const params = useParams();
   const router = useRouter();
-
   const [token, setToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
   const [isLocked, setIsLocked] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState('');
+  const [needsGuestInfo, setNeedsGuestInfo] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestInstitution, setGuestInstitution] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Lobby & Optimizer states
   const [inLobby, setInLobby] = useState(true);
-
-  // Initial media preferences from Lobby
-  const [initialAudio, setInitialAudio] = useState(true);
-  const [initialVideo, setInitialVideo] = useState(true);
-
-  // Performance / Low data mode toggle
+  const [initialCam, setInitialCam] = useState(true);
+  const [initialMic, setInitialMic] = useState(true);
   const [lowDataMode, setLowDataMode] = useState(false);
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
 
   useEffect(() => {
-    const checkAuthAndPrepare = async () => {
+    const fetchToken = async () => {
       const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        setIsLoggedIn(true);
-        try {
-          const res = await fetch('/api/me', {
-            headers: { Authorization: `Bearer ${storedToken}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setUserName(data.name);
-          }
-        } catch {}
+      if (!storedToken) {
+        setNeedsGuestInfo(true);
+        return;
       }
-    };
-    checkAuthAndPrepare();
-  }, []);
-
-  const handleLobbyJoin = async (settings: {
-    micEnabled: boolean;
-    videoEnabled: boolean;
-    name?: string;
-    institution?: string;
-  }) => {
-    setInitialAudio(settings.micEnabled);
-    setInitialVideo(settings.videoEnabled);
-
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      // Fetch token for logged in user
       try {
         const res = await fetch(`/api/meetings/${params.id}/token`, {
           headers: { Authorization: `Bearer ${storedToken}` },
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || 'Gagal masuk ke ruang meeting.');
+          throw new Error(errData.detail || 'Gagal masuk ke room.');
         }
         const data = await res.json();
         setToken(data.token);
         if (data.server_url) setServerUrl(data.server_url);
         if (data.is_locked !== undefined) setIsLocked(data.is_locked);
-        setInLobby(false);
       } catch (err: any) {
-        alert(err.message || 'Gagal masuk meeting.');
+        alert(err.message || 'Gagal masuk ke room.');
         router.push('/dashboard');
       }
-    } else {
-      // Guest Join
-      try {
-        const res = await fetch(`/api/meetings/${params.id}/guest`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: settings.name,
-            institution: settings.institution || 'Guest',
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.detail || 'Ruang meeting tidak ditemukan atau sedang dikunci.');
-        }
-        const data = await res.json();
-        setToken(data.token);
-        if (data.server_url) setServerUrl(data.server_url);
-        if (data.is_locked !== undefined) setIsLocked(data.is_locked);
-        setInLobby(false);
-      } catch (err: any) {
-        alert(err.message || 'Gagal bergabung sebagai tamu.');
+    };
+    fetchToken();
+  }, [params.id, router]);
+
+  const handleGuestJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsJoining(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/meetings/${params.id}/guest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: guestName, institution: guestInstitution }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Meeting room tidak ditemukan atau sedang dikunci.');
       }
+      const data = await res.json();
+      setToken(data.token);
+      if (data.server_url) setServerUrl(data.server_url);
+      if (data.is_locked !== undefined) setIsLocked(data.is_locked);
+      setNeedsGuestInfo(false);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Room tidak tersedia.');
+    } finally {
+      setIsJoining(false);
     }
   };
 
-  // Render Pre-Join Lobby first
-  if (inLobby) {
+  if (needsGuestInfo && token === '') {
     return (
-      <PreJoinLobby
-        roomId={params.id as string}
-        initialName={userName}
-        isLoggedIn={isLoggedIn}
-        onJoin={handleLobbyJoin}
-      />
+      <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight">
+            Join Meeting
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-400">
+            Silakan masukkan nama Anda untuk bergabung sebagai Tamu
+          </p>
+        </div>
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+          <div className="bg-slate-900/80 backdrop-blur-xl py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-slate-800/80">
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
+                {errorMsg}
+              </div>
+            )}
+            <form className="space-y-5" onSubmit={handleGuestJoin}>
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Nama Lengkap</label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-700/80 rounded-xl bg-slate-950 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Budi Santoso"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Instansi / Perusahaan</label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Building2 className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={guestInstitution}
+                    onChange={(e) => setGuestInstitution(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-700/80 rounded-xl bg-slate-950 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="PT Maju Jaya"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isJoining}
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 focus:outline-none transition-all disabled:opacity-50"
+              >
+                {isJoining ? 'Menghubungkan...' : <span className="flex items-center gap-2">Masuk Room <ArrowRight className="w-4 h-4" /></span>}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (token === '' || serverUrl === '') {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center text-slate-400 gap-4">
-        <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-        <p className="font-medium text-sm">Connecting to secure WebRTC room...</p>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-4">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+        <p className="text-sm font-mono">Menyiapkan koneksi ruang rapat...</p>
       </div>
+    );
+  }
+
+  // Pre-Join Lobby Stage
+  if (inLobby) {
+    return (
+      <PreJoinLobby
+        userName={guestName || 'Host'}
+        onJoin={(cam, mic) => {
+          setInitialCam(cam);
+          setInitialMic(mic);
+          setInLobby(false);
+        }}
+      />
     );
   }
 
   return (
     <LiveKitRoom
-      video={initialVideo}
-      audio={initialAudio}
+      video={initialCam}
+      audio={initialMic}
       token={token}
       serverUrl={serverUrl}
       connect={true}
       options={{
         adaptiveStream: true,
         dynacast: true,
-        publishDefaults: {
-          simulcast: true,
-          videoSimulcastLayers: lowDataMode ? [] : undefined,
+        videoCaptureDefaults: {
+          resolution: lowDataMode ? { width: 480, height: 360 } : { width: 1280, height: 720 },
         },
       }}
       onDisconnected={() => {
@@ -1281,25 +1773,33 @@ export default function Room() {
         }
       }}
       data-lk-theme="default"
-      className="flex flex-col md:flex-row w-full h-[100dvh] bg-[#0f172a] overflow-hidden relative"
+      className="flex flex-col md:flex-row w-full h-[100dvh] bg-slate-950 overflow-hidden relative"
     >
+      {/* Floating Reactions on Top of Video */}
       <ReactionOverlay />
 
+      {/* Collaborative Whiteboard Canvas Modal */}
+      <WhiteboardModal isOpen={whiteboardOpen} onClose={() => setWhiteboardOpen(false)} />
+
+      {/* Main Conference Area */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
         <RoomHeader
           roomId={params.id as string}
           lowDataMode={lowDataMode}
           setLowDataMode={setLowDataMode}
+          onOpenWhiteboard={() => setWhiteboardOpen(true)}
         />
-        <div className="flex-1 overflow-hidden min-h-0">
+        <div className="flex-1 overflow-hidden min-h-0 relative">
           <VideoConference />
         </div>
       </div>
 
+      {/* Collaboration & Participant Sidebar */}
       <ParticipantSidebar
         roomId={params.id as string}
         livekitToken={token}
         initialIsLocked={isLocked}
+        onOpenWhiteboard={() => setWhiteboardOpen(true)}
       />
     </LiveKitRoom>
   );

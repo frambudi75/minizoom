@@ -14,9 +14,9 @@ import discord_service
 models.Base.metadata.create_all(bind=engine)
 run_migrations()
 
-app = FastAPI(title="Minizoom API", version="1.4.0")
+app = FastAPI(title="Minizoom API", version="1.5.0")
 
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 BUILD_DATE = "2026-08-29"
 
 @app.get("/api/system/status")
@@ -31,6 +31,11 @@ def get_system_status():
         "livekit_url": livekit_url.split("?")[0],
         "database": "SQLite WAL (Persistent Volume)",
         "features": [
+            "Collaborative Interactive Whiteboard",
+            "Live Polls & Real-Time Voting",
+            "In-Meeting Shared Notes & Exporter",
+            "Audio Chimes & Sound Synthesizer",
+            "Progressive Web App (PWA) Support",
             "Glassmorphism 2.0 & Cyber Grid UI",
             "Pre-Join Lobby (Camera Preview & Audio Meter)",
             "Adaptive Low-Data Mode Optimizer",

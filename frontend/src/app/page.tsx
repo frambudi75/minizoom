@@ -54,7 +54,7 @@ export default function Home() {
           <div className="max-w-2xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Minizoom v1.4.0 Enterprise</span>
+              <span>Minizoom v1.5.0 Suite</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] text-white">

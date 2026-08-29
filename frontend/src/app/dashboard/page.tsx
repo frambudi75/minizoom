@@ -235,7 +235,7 @@ export default function Dashboard() {
             <span className="font-bold text-base tracking-tight text-white">Minizoom</span>
           </div>
           <span className="px-2 py-0.5 text-[10px] font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 rounded">
-            {systemInfo?.app_version ? `v${systemInfo.app_version}` : 'v1.4.0'}
+            {systemInfo?.app_version ? `v${systemInfo.app_version}` : 'v1.5.0'}
           </span>
         </div>
 
