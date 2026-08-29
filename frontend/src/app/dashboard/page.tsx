@@ -15,11 +15,8 @@ import {
   Settings,
   Server,
   ShieldCheck,
-  Activity,
-  Sparkles,
-  Radio,
-  ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -218,110 +215,100 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-tech-pattern flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-        <p className="text-sm font-mono text-slate-400">Loading Minizoom Dashboard...</p>
+      <div className="min-h-screen bg-enterprise-dark flex flex-col items-center justify-center text-slate-400 gap-3">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+        <p className="text-xs font-mono text-slate-400">Loading Workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-tech-pattern text-slate-50 flex relative overflow-hidden">
-      {/* Background Ambient Glow Orbs */}
-      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none animate-pulse-glow" />
-      <div className="absolute bottom-0 left-1/3 w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[160px] pointer-events-none animate-drift-slow" />
-      <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Cyber Grid Overlay */}
-      <div className="absolute inset-0 bg-cyber-grid pointer-events-none opacity-30 [mask-image:radial-gradient(ellipse_80%_60%_at_50%_40%,#000_70%,transparent_100%)]" />
-
+    <div className="min-h-screen bg-enterprise-dark text-slate-100 flex relative overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800/80 bg-slate-950/70 backdrop-blur-2xl flex-col hidden md:flex z-20 relative">
+      <aside className="w-64 border-r border-slate-800 bg-slate-950/90 flex-col hidden md:flex z-20 relative">
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800/80">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/30">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
               <Video className="w-4 h-4" />
             </div>
-            <span className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-200">
-              Minizoom
-            </span>
+            <span className="font-bold text-base tracking-tight text-white">Minizoom</span>
           </div>
-          <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 rounded-full">
+          <span className="px-2 py-0.5 text-[10px] font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 rounded">
             {systemInfo?.app_version ? `v${systemInfo.app_version}` : 'v1.4.0'}
           </span>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5">
+        <nav className="flex-1 px-3 py-6 space-y-1">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'overview'
-                ? 'bg-gradient-to-r from-indigo-600/20 to-purple-600/15 text-indigo-300 border border-indigo-500/30 shadow-sm'
-                : 'text-slate-400 hover:bg-slate-850 hover:text-slate-200'
+                ? 'bg-blue-600/15 text-blue-400 font-bold border border-blue-500/20'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
-            <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+            <LayoutDashboard className="w-4 h-4" />
             Overview
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'schedule'
-                ? 'bg-gradient-to-r from-indigo-600/20 to-purple-600/15 text-indigo-300 border border-indigo-500/30 shadow-sm'
-                : 'text-slate-400 hover:bg-slate-850 hover:text-slate-200'
+                ? 'bg-blue-600/15 text-blue-400 font-bold border border-blue-500/20'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
-            <Calendar className="w-4 h-4 text-blue-400" />
+            <Calendar className="w-4 h-4" />
             Schedule
           </button>
 
           {user?.role === 'superadmin' && (
             <>
-              <div className="pt-4 pb-1 px-4">
+              <div className="pt-4 pb-1 px-3.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Administration</span>
               </div>
               <button
                 onClick={() => setActiveTab('users')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
                   activeTab === 'users'
-                    ? 'bg-gradient-to-r from-purple-600/20 to-indigo-600/15 text-purple-300 border border-purple-500/30 shadow-sm'
-                    : 'text-slate-400 hover:bg-slate-850 hover:text-slate-200'
+                    ? 'bg-blue-600/15 text-blue-400 font-bold border border-blue-500/20'
+                    : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
                 }`}
               >
-                <Users className="w-4 h-4 text-purple-400" />
+                <Users className="w-4 h-4" />
                 Users
                 {pendingUsers.length > 0 && (
-                  <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
                     {pendingUsers.length}
                   </span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
                   activeTab === 'settings'
-                    ? 'bg-gradient-to-r from-orange-600/20 to-amber-600/15 text-orange-300 border border-orange-500/30 shadow-sm'
-                    : 'text-slate-400 hover:bg-slate-850 hover:text-slate-200'
+                    ? 'bg-blue-600/15 text-blue-400 font-bold border border-blue-500/20'
+                    : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
                 }`}
               >
-                <Settings className="w-4 h-4 text-orange-400" />
+                <Settings className="w-4 h-4" />
                 Settings
               </button>
             </>
           )}
         </nav>
 
-        {/* User Card & Sign Out */}
-        <div className="p-4 border-t border-slate-800/80 space-y-2">
-          <div className="flex items-center gap-3 p-3 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-inner">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-indigo-600/30">
+        {/* User Profile */}
+        <div className="p-3 border-t border-slate-800 space-y-2">
+          <div className="flex items-center gap-3 p-2.5 bg-slate-900/60 border border-slate-800 rounded-xl">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
               {user?.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="text-xs font-bold text-slate-200 truncate">{user?.name}</p>
-              <p className="text-[11px] text-indigo-400 font-mono capitalize truncate">{user?.role}</p>
+              <p className="text-[11px] text-slate-400 font-mono capitalize truncate">{user?.role}</p>
             </div>
           </div>
           <button
@@ -329,9 +316,9 @@ export default function Dashboard() {
               localStorage.removeItem('token');
               router.push('/');
             }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
           >
-            <LogOut className="w-4 h-4" /> Sign Out
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
           </button>
         </div>
       </aside>
@@ -339,9 +326,9 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 z-10 relative">
         {/* Mobile Header */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-20 md:hidden">
+        <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950 sticky top-0 z-20 md:hidden">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white">
               <Video className="w-4 h-4" />
             </div>
             <span className="font-bold text-base tracking-tight text-white">Minizoom</span>
@@ -358,40 +345,39 @@ export default function Dashboard() {
         </header>
 
         {/* Dashboard Body */}
-        <div className="flex-1 p-6 lg:p-10 overflow-y-auto">
-          <div className="max-w-5xl mx-auto space-y-8">
+        <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+          <div className="max-w-5xl mx-auto space-y-6">
             {activeTab === 'overview' && (
               <>
-                {/* Welcome Banner & Action Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl glass-panel relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="relative z-10 space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[11px] font-semibold mb-1">
-                      <Sparkles className="w-3 h-3 text-indigo-400" />
-                      Workspace Ready
+                {/* Header Action Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl clean-card">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      Workspace Active
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200 tracking-tight">
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                       Welcome back, {user?.name.split(' ')[0]}!
                     </h1>
-                    <p className="text-xs sm:text-sm text-slate-400">
-                      Host virtual conferences, manage schedules, and collaborate smoothly in real-time.
+                    <p className="text-xs text-slate-400">
+                      Host virtual conferences and manage meeting schedules in real-time.
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2.5 relative z-10">
+                  <div className="flex flex-wrap gap-2.5">
                     <button
                       onClick={openPersonalMeetingRoom}
                       disabled={meetingLoading}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900/90 hover:bg-purple-900/30 text-purple-300 border border-purple-500/30 rounded-2xl font-bold text-xs transition-all shadow-md active:scale-95 hover:border-purple-400/50"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-xl font-semibold text-xs transition-colors active:scale-95"
                       title="Start your permanent Personal Meeting Room"
                     >
-                      <Sparkles className="w-4 h-4 text-purple-400" />
+                      <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                       Personal Room
                     </button>
                     <button
                       onClick={createInstantMeeting}
                       disabled={meetingLoading}
-                      className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-50 text-white rounded-2xl font-bold text-xs transition-all shadow-lg shadow-indigo-900/40 active:scale-95 hover:-translate-y-0.5"
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm active:scale-95"
                     >
                       <Plus className="w-4 h-4" />
                       {meetingLoading ? 'Creating...' : 'Instant Meeting'}
@@ -401,45 +387,45 @@ export default function Dashboard() {
 
                 {/* Main Overview Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Scheduled Meetings (2 cols) */}
-                  <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-base font-bold flex items-center gap-2 text-slate-200">
-                        <Clock className="w-4 h-4 text-indigo-400" /> Scheduled Meetings
+                  {/* Scheduled Meetings (2 cols) */}
+                  <div className="lg:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-sm font-bold flex items-center gap-2 text-slate-200">
+                        <Clock className="w-4 h-4 text-blue-400" /> Scheduled Meetings
                       </h2>
                       <span className="text-xs text-slate-400 font-mono">{meetings.length} Total</span>
                     </div>
 
-                    <div className="glass-panel rounded-3xl p-6 shadow-xl space-y-3">
+                    <div className="clean-card rounded-2xl p-5 shadow-sm space-y-3">
                       {meetings.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500 text-xs space-y-2">
-                          <Calendar className="w-8 h-8 mx-auto opacity-30 text-slate-400" />
+                        <div className="text-center py-10 text-slate-500 text-xs space-y-2">
+                          <Calendar className="w-7 h-7 mx-auto opacity-30 text-slate-400" />
                           <p>No meetings scheduled yet.</p>
                           <button
                             onClick={() => setActiveTab('schedule')}
-                            className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-4"
+                            className="text-blue-400 hover:text-blue-300 font-medium underline underline-offset-4"
                           >
                             Schedule a new session →
                           </button>
                         </div>
                       ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           {meetings.map((m: any) => (
                             <div
                               key={m.id}
-                              className="glass-panel-interactive flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl gap-4"
+                              className="clean-card-interactive flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl gap-3"
                             >
-                              <div className="space-y-1">
+                              <div className="space-y-0.5">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <h4 className="font-semibold text-slate-100 text-sm">{m.title}</h4>
+                                  <h4 className="font-semibold text-slate-100 text-xs sm:text-sm">{m.title}</h4>
                                   {m.is_pmr && (
-                                    <span className="px-2 py-0.5 text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
+                                    <span className="px-2 py-0.5 text-[9px] font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 rounded">
                                       PMR
                                     </span>
                                   )}
                                   {m.active_participants > 0 ? (
-                                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full animate-pulse">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                    <span className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                       {m.active_participants} Online
                                     </span>
                                   ) : (
@@ -448,7 +434,7 @@ export default function Dashboard() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-slate-400 flex items-center gap-1.5 font-mono">
+                                <p className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
                                   <Calendar className="w-3 h-3 text-slate-500" />
                                   {new Date(m.scheduled_at).toLocaleString()}
                                 </p>
@@ -457,23 +443,23 @@ export default function Dashboard() {
                               <div className="flex gap-2 shrink-0 items-center">
                                 <button
                                   onClick={() => deleteMeeting(m.room_id)}
-                                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                                   title="Delete Meeting"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={() => copyLink(m.room_id)}
-                                  className="px-3.5 py-2 bg-slate-900/80 hover:bg-slate-800 rounded-xl text-xs font-medium transition-colors text-slate-300 border border-slate-700/60"
+                                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-medium transition-colors text-slate-300 border border-slate-700"
                                 >
                                   {copiedId === m.room_id ? 'Copied!' : 'Copy Link'}
                                 </button>
                                 <Link
                                   href={`/room/${m.room_id}`}
-                                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl text-xs font-bold transition-all text-white shadow-md shadow-emerald-900/30 flex items-center gap-1.5"
+                                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-semibold transition-colors text-white flex items-center gap-1"
                                 >
                                   <span>Join</span>
-                                  <ChevronRight className="w-3.5 h-3.5" />
+                                  <ChevronRight className="w-3 h-3" />
                                 </Link>
                               </div>
                             </div>
@@ -483,44 +469,42 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Right Approvals Widget (1 col) */}
+                  {/* Approvals Widget (1 col) */}
                   {user?.role === 'superadmin' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-base font-bold flex items-center gap-2 text-purple-300">
-                          <Users className="w-4 h-4 text-purple-400" /> Pending Approvals
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between px-1">
+                        <h2 className="text-sm font-bold flex items-center gap-2 text-slate-200">
+                          <Users className="w-4 h-4 text-slate-400" /> Pending Approvals
                         </h2>
                         {pendingUsers.length > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
-                            {pendingUsers.length} Action Needed
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+                            {pendingUsers.length}
                           </span>
                         )}
                       </div>
 
-                      <div className="glass-panel rounded-3xl p-5 shadow-xl space-y-3">
+                      <div className="clean-card rounded-2xl p-4 space-y-2.5">
                         {pendingUsers.length === 0 ? (
-                          <div className="text-center py-10 text-slate-500 text-xs space-y-1">
-                            <CheckCircle className="w-7 h-7 mx-auto opacity-30 text-emerald-400" />
-                            <p className="font-semibold text-slate-400">All caught up!</p>
+                          <div className="text-center py-8 text-slate-500 text-xs space-y-1">
+                            <CheckCircle className="w-6 h-6 mx-auto opacity-30 text-emerald-400" />
+                            <p className="font-medium text-slate-400">All caught up</p>
                             <p className="text-[11px]">No pending registrations.</p>
                           </div>
                         ) : (
-                          <div className="space-y-2.5">
+                          <div className="space-y-2">
                             {pendingUsers.map((u) => (
                               <div
                                 key={u.id}
-                                className="flex items-center justify-between p-3.5 bg-slate-950/70 border border-slate-800/80 rounded-2xl gap-2 hover:border-purple-500/30 transition-colors"
+                                className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl gap-2"
                               >
                                 <div className="overflow-hidden space-y-0.5">
-                                  <p className="font-bold text-xs text-slate-100 truncate">{u.name}</p>
+                                  <p className="font-semibold text-xs text-slate-100 truncate">{u.name}</p>
                                   <p className="text-[11px] text-slate-400 font-mono truncate">{u.email}</p>
                                 </div>
                                 <button
                                   onClick={() => approveUser(u.id)}
-                                  className="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1 shadow-sm"
-                                  title="Approve User"
+                                  className="px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition-colors shrink-0"
                                 >
-                                  <CheckCircle className="w-3.5 h-3.5" />
                                   Approve
                                 </button>
                               </div>
@@ -536,24 +520,24 @@ export default function Dashboard() {
 
             {/* Schedule Tab */}
             {activeTab === 'schedule' && (
-              <div className="max-w-xl mx-auto space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-indigo-600/20 to-blue-600/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto border border-indigo-500/30 shadow-lg shadow-indigo-900/20">
-                    <Calendar className="w-7 h-7" />
+              <div className="max-w-xl mx-auto space-y-5">
+                <div className="text-center space-y-1">
+                  <div className="w-12 h-12 bg-blue-600/15 text-blue-400 rounded-xl flex items-center justify-center mx-auto border border-blue-500/20">
+                    <Calendar className="w-6 h-6" />
                   </div>
-                  <h1 className="text-3xl font-extrabold text-white tracking-tight">Schedule a Meeting</h1>
-                  <p className="text-xs sm:text-sm text-slate-400">
-                    Set up a future room with unique credentials & instant link sharing.
+                  <h1 className="text-2xl font-bold text-white tracking-tight">Schedule a Meeting</h1>
+                  <p className="text-xs text-slate-400">
+                    Set up a scheduled video conference room with instant link sharing.
                   </p>
                 </div>
 
-                <form onSubmit={scheduleMeeting} className="glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl space-y-5">
+                <form onSubmit={scheduleMeeting} className="clean-card p-6 rounded-2xl space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-300 ml-1">Meeting Title</label>
                     <input
                       type="text"
-                      className="w-full px-4 py-3.5 bg-slate-950/60 border border-slate-700/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-100 text-sm shadow-inner"
-                      placeholder="e.g. Weekly Product Sync"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-100 text-xs"
+                      placeholder="e.g. Weekly Team Sync"
                       value={scheduleData.title}
                       onChange={(e) => setScheduleData({ ...scheduleData, title: e.target.value })}
                       required
@@ -563,7 +547,7 @@ export default function Dashboard() {
                     <label className="text-xs font-semibold text-slate-300 ml-1">Date & Time</label>
                     <input
                       type="datetime-local"
-                      className="w-full px-4 py-3.5 bg-slate-950/60 border border-slate-700/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-100 text-sm shadow-inner"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-100 text-xs"
                       value={scheduleData.scheduled_at}
                       onChange={(e) => setScheduleData({ ...scheduleData, scheduled_at: e.target.value })}
                       required
@@ -572,7 +556,7 @@ export default function Dashboard() {
                   <button
                     type="submit"
                     disabled={meetingLoading}
-                    className="w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-50 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-900/40 active:scale-95"
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm active:scale-95"
                   >
                     {meetingLoading ? 'Scheduling...' : 'Save & Create Link'}
                   </button>
@@ -582,17 +566,15 @@ export default function Dashboard() {
 
             {/* Users Tab (Superadmin) */}
             {activeTab === 'users' && user?.role === 'superadmin' && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-extrabold flex items-center gap-3 text-white">
-                      <Users className="w-6 h-6 text-purple-400" /> User Management
-                    </h1>
-                    <p className="text-xs text-slate-400 mt-1">Manage accounts, approve requests, and assign superadmin roles.</p>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <h1 className="text-xl font-bold flex items-center gap-2.5 text-white">
+                    <Users className="w-5 h-5 text-blue-400" /> User Management
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-0.5">Manage accounts, approve requests, and assign superadmin roles.</p>
                 </div>
 
-                <div className="glass-panel rounded-3xl p-6 shadow-xl overflow-hidden">
+                <div className="clean-card rounded-2xl p-5 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
@@ -606,37 +588,37 @@ export default function Dashboard() {
                       </thead>
                       <tbody className="divide-y divide-slate-800/60 text-xs">
                         {allUsers.map((u: any) => (
-                          <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="py-4 px-4 text-slate-100 font-bold">{u.name}</td>
-                            <td className="py-4 px-4 text-slate-400 font-mono">{u.email}</td>
-                            <td className="py-4 px-4">
+                          <tr key={u.id} className="hover:bg-slate-900/40 transition-colors">
+                            <td className="py-3 px-4 text-slate-100 font-semibold">{u.name}</td>
+                            <td className="py-3 px-4 text-slate-400 font-mono">{u.email}</td>
+                            <td className="py-3 px-4">
                               {u.status === 'approved' ? (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                                   Active
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
                                   Pending
                                 </span>
                               )}
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-3 px-4">
                               {u.role === 'superadmin' ? (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-500/15 text-blue-300 border border-blue-500/30">
                                   Superadmin
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-500/15 text-slate-400 border border-slate-500/30">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
                                   User
                                 </span>
                               )}
                             </td>
-                            <td className="py-4 px-4 text-right">
+                            <td className="py-3 px-4 text-right">
                               <div className="flex justify-end gap-2">
                                 {u.status === 'pending' && (
                                   <button
                                     onClick={() => approveUser(u.id)}
-                                    className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                    className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
                                   >
                                     Approve
                                   </button>
@@ -644,10 +626,10 @@ export default function Dashboard() {
                                 {u.id !== user.id && (
                                   <button
                                     onClick={() => toggleUserRole(u.id, u.role)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors border ${
                                       u.role === 'superadmin'
                                         ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                        : 'bg-purple-600/20 text-purple-300 border-purple-500/40 hover:bg-purple-600/30'
+                                        : 'bg-blue-600/15 text-blue-300 border-blue-500/30 hover:bg-blue-600/25'
                                     }`}
                                   >
                                     {u.role === 'superadmin' ? 'Demote to User' : 'Make Admin'}
@@ -666,64 +648,63 @@ export default function Dashboard() {
 
             {/* Settings Tab (Superadmin) */}
             {activeTab === 'settings' && user?.role === 'superadmin' && (
-              <div className="max-w-3xl mx-auto space-y-6">
+              <div className="max-w-3xl mx-auto space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h1 className="text-2xl font-extrabold flex items-center gap-3 text-white">
-                      <Settings className="w-6 h-6 text-orange-400" /> System Settings
+                    <h1 className="text-xl font-bold flex items-center gap-2.5 text-white">
+                      <Settings className="w-5 h-5 text-slate-300" /> System Settings
                     </h1>
-                    <p className="text-xs text-slate-400 mt-1">Configure global notification servers & inspect system health.</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Global SMTP and Discord notifications configuration.</p>
                   </div>
                   {systemInfo && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <div className="flex items-center gap-2 px-3 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 text-xs font-mono">
                       Release v{systemInfo.app_version}
                     </div>
                   )}
                 </div>
 
                 {/* System Status Card */}
-                <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-xl space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
-                    <div className="flex items-center gap-2.5">
-                      <Server className="w-5 h-5 text-indigo-400" />
-                      <h2 className="text-base font-bold text-slate-100">Live Environment Status</h2>
+                <div className="clean-card p-5 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Server className="w-4 h-4 text-blue-400" />
+                      <h2 className="text-sm font-bold text-slate-100">Environment Status</h2>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                       Operational
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                      <p className="text-slate-400 font-medium">Application Build</p>
-                      <p className="text-sm font-bold text-slate-100 mt-1 font-mono">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <p className="text-slate-400">Application Version</p>
+                      <p className="text-xs font-bold text-slate-100 mt-0.5 font-mono">
                         v{systemInfo?.app_version || '1.4.0'} ({systemInfo?.build_date || '2026-08-29'})
                       </p>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                      <p className="text-slate-400 font-medium">WebRTC SFU Mode</p>
-                      <p className="text-sm font-bold text-indigo-400 mt-1 truncate">
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                      <p className="text-slate-400">WebRTC SFU Mode</p>
+                      <p className="text-xs font-bold text-blue-400 mt-0.5 truncate">
                         {systemInfo?.livekit_mode || 'LiveKit Cloud'}
                       </p>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 sm:col-span-2">
-                      <p className="text-slate-400 font-medium mb-2">Active Modules</p>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 sm:col-span-2">
+                      <p className="text-slate-400 mb-2">Installed Features</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {(systemInfo?.features || [
                           'Pre-Join Lobby',
                           'Low-Data Optimizer',
                           'Floating Reactions',
                           'Persistent Volume Storage',
-                          'In-App SMTP & Discord',
+                          'SMTP & Discord Notifications',
                         ]).map((feat: string, idx: number) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700"
                           >
-                            <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                            <ShieldCheck className="w-3 h-3 text-blue-400" />
                             {feat}
                           </span>
                         ))}
@@ -733,58 +714,58 @@ export default function Dashboard() {
                 </div>
 
                 {/* Settings Form */}
-                <form onSubmit={saveSettings} className="space-y-6">
+                <form onSubmit={saveSettings} className="space-y-4">
                   {/* SMTP Card */}
-                  <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-xl space-y-4">
-                    <h2 className="text-base font-bold text-slate-200 border-b border-slate-800/80 pb-3">
+                  <div className="clean-card p-5 rounded-2xl space-y-4">
+                    <h2 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2.5">
                       Email Notifications (SMTP)
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                      <div className="space-y-1.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1">
                         <label className="font-semibold text-slate-300 ml-1">SMTP Server</label>
                         <input
                           type="text"
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100"
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
                           placeholder="smtp.example.com"
                           value={settings.smtp_server}
                           onChange={(e) => setSettings({ ...settings, smtp_server: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         <label className="font-semibold text-slate-300 ml-1">SMTP Port</label>
                         <input
                           type="number"
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100"
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
                           placeholder="587"
                           value={settings.smtp_port}
                           onChange={(e) => setSettings({ ...settings, smtp_port: parseInt(e.target.value) || 587 })}
                         />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         <label className="font-semibold text-slate-300 ml-1">SMTP Username</label>
                         <input
                           type="text"
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100"
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
                           placeholder="user@example.com"
                           value={settings.smtp_username}
                           onChange={(e) => setSettings({ ...settings, smtp_username: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         <label className="font-semibold text-slate-300 ml-1">SMTP Password</label>
                         <input
                           type="password"
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100"
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
                           placeholder="••••••••"
                           value={settings.smtp_password}
                           onChange={(e) => setSettings({ ...settings, smtp_password: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1.5 md:col-span-2">
+                      <div className="space-y-1 md:col-span-2">
                         <label className="font-semibold text-slate-300 ml-1">Sender Email (From)</label>
                         <input
                           type="email"
-                          className="w-full px-4 py-3 bg-slate-950/60 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-slate-100"
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
                           placeholder="noreply@minizoom.local"
                           value={settings.smtp_from}
                           onChange={(e) => setSettings({ ...settings, smtp_from: e.target.value })}
@@ -794,15 +775,15 @@ export default function Dashboard() {
                   </div>
 
                   {/* Discord Card */}
-                  <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-xl space-y-4">
-                    <h2 className="text-base font-bold text-slate-200 border-b border-slate-800/80 pb-3">
+                  <div className="clean-card p-5 rounded-2xl space-y-3">
+                    <h2 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2.5">
                       Discord Integration
                     </h2>
-                    <div className="space-y-1.5 text-xs">
+                    <div className="space-y-1 text-xs">
                       <label className="font-semibold text-slate-300 ml-1">Webhook URL</label>
                       <input
                         type="text"
-                        className="w-full px-4 py-3 bg-slate-950/60 border border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-100"
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
                         placeholder="https://discord.com/api/webhooks/..."
                         value={settings.discord_webhook_url}
                         onChange={(e) => setSettings({ ...settings, discord_webhook_url: e.target.value })}
@@ -813,9 +794,9 @@ export default function Dashboard() {
                   <button
                     type="submit"
                     disabled={savingSettings}
-                    className="w-full py-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:opacity-50 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-orange-900/40 active:scale-95"
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm active:scale-95"
                   >
-                    {savingSettings ? 'Saving Settings...' : 'Save Settings'}
+                    {savingSettings ? 'Saving...' : 'Save Settings'}
                   </button>
                 </form>
               </div>
