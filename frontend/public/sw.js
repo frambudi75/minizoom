@@ -1,6 +1,6 @@
-// Minizoom PWA Service Worker
-const CACHE_NAME = 'minizoom-pwa-v1';
-const PRECACHE_ASSETS = [
+// Minizoom Bulletproof PWA Service Worker v1.5.0
+const CACHE_NAME = 'minizoom-cache-v2';
+const STATIC_ASSETS = [
   '/',
   '/manifest.json',
   '/icon-192.png',
@@ -11,7 +11,7 @@ const PRECACHE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
+      return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
@@ -30,35 +30,51 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network-first with cache fallback for navigation and static assets
 self.addEventListener('fetch', (event) => {
-  // Hanya intercept HTTP/HTTPS GET requests
+  // Hanya proses request GET dari origin yang sama (bukan chrome-extension / third-party)
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   const url = new URL(event.request.url);
 
-  // Jangan cache WebSocket atau API LiveKit/FastAPI requests
+  // BYPASS: Jangan intercept API, livekit signaling, atau dynamic routes
   if (url.pathname.startsWith('/api/') || url.pathname.includes('livekit')) {
     return;
   }
 
+  // Network-First with safe fallback
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
-        // Simpan salinan ke cache jika valid
-        if (response && response.status === 200 && response.type === 'basic') {
-          const responseToCache = response.clone();
+      .then((networkResponse) => {
+        // Cache hanya static assets yang sukses 200
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          networkResponse.type === 'basic' &&
+          (url.pathname.endsWith('.png') ||
+           url.pathname.endsWith('.ico') ||
+           url.pathname.endsWith('.json') ||
+           url.pathname.endsWith('.css') ||
+           url.pathname.endsWith('.js'))
+        ) {
+          const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
         }
-        return response;
+        return networkResponse;
       })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/');
-          }
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        if (event.request.mode === 'navigate') {
+          const rootCached = await caches.match('/');
+          if (rootCached) return rootCached;
+        }
+        return new Response('Network error occurred', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({ 'Content-Type': 'text/plain' })
         });
       })
   );
