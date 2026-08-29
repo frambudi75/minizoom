@@ -8,9 +8,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   // Proxy API request ke backend (tidak perlu CORS dari browser)
   async rewrites() {
     return [
