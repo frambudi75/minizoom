@@ -24,13 +24,15 @@ export default function Login() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: form.toString(),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Login failed');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || 'Email atau password salah, atau akun belum disetujui.');
+      }
       
       localStorage.setItem('token', data.access_token);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Gagal masuk. Periksa koneksi Anda.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,7 @@ export default function Login() {
             </div>
             <span className="text-sm font-bold tracking-tight text-white">Minizoom</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-              v1.4.0
+              v1.5.0
             </span>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">

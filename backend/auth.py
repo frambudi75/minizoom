@@ -4,12 +4,18 @@ from jwt.exceptions import InvalidTokenError
 from datetime import datetime, timedelta
 import os
 
-SECRET_KEY = "super-secret-minizoom-key-change-this-later"
+SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-minizoom-key-change-this-later")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 day
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    try:
+        if not plain_password or not hashed_password:
+            return False
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception as e:
+        print(f"Password verify error: {e}")
+        return False
 
 def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
