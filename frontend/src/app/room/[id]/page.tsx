@@ -517,7 +517,7 @@ function ParticipantSidebar({
           {isHost && (
             <div className="p-3.5 bg-slate-900/90 border border-slate-700/70 rounded-2xl shadow-lg space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-purple-400">
+                <div className="flex items-center gap-1.5 text-blue-400">
                   <Sparkles className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-200">Host Controls</span>
                 </div>
@@ -747,7 +747,7 @@ function RoomHeader({
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="hidden sm:inline">Room:</span>
-          <span className="font-mono text-purple-300 truncate max-w-[100px] sm:max-w-[200px]">{roomId}</span>
+          <span className="font-mono text-slate-200 truncate max-w-[100px] sm:max-w-[200px]">{roomId}</span>
         </div>
         <button
           onClick={handleCopy}
