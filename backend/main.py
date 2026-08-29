@@ -14,10 +14,10 @@ import discord_service
 models.Base.metadata.create_all(bind=engine)
 run_migrations()
 
-app = FastAPI(title="Minizoom API", version="1.3.0")
+app = FastAPI(title="Minizoom API", version="1.4.0")
 
-APP_VERSION = "1.3.0"
-BUILD_DATE = "2026-08-28"
+APP_VERSION = "1.4.0"
+BUILD_DATE = "2026-08-29"
 
 @app.get("/api/system/status")
 def get_system_status():
@@ -31,12 +31,16 @@ def get_system_status():
         "livekit_url": livekit_url.split("?")[0],
         "database": "SQLite WAL (Persistent Volume)",
         "features": [
+            "Glassmorphism 2.0 & Cyber Grid UI",
+            "Pre-Join Lobby (Camera Preview & Audio Meter)",
+            "Adaptive Low-Data Mode Optimizer",
+            "Real-Time Floating Emoji Reactions",
             "Persistent Data Volume (/app/data)",
             "Host Controls (Mute All / Kick / Lock Room)",
-            "Real-Time In-Meeting Chat",
+            "In-Meeting Live Chat",
             "Raise Hand Interaction",
             "Personal Meeting Rooms (PMR)",
-            "Browser Meeting Recording (.webm)",
+            "Browser Screen & Audio Recorder (.webm)",
             "Dynamic LiveKit Cloud WebRTC SFU"
         ]
     }

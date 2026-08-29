@@ -54,7 +54,7 @@ export default function Login() {
             </div>
             <span className="text-base font-bold tracking-tight text-white">Minizoom</span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              v1.3
+              v1.4.0
             </span>
           </Link>
           <h1 className="text-3xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200 tracking-tight">
