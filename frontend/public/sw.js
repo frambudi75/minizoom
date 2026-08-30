@@ -1,7 +1,6 @@
 // Minizoom Bulletproof PWA Service Worker v1.5.0
-const CACHE_NAME = 'minizoom-cache-v2';
+const CACHE_NAME = 'minizoom-cache-v1.5.0';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
