@@ -199,6 +199,75 @@ def change_user_role(user_id: int, role: str, current_user: models.User = Depend
     db.refresh(user)
     return user
 
+@app.delete("/api/admin/users/{user_id}")
+def delete_user(user_id: int, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own superadmin account")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete associated meetings
+    db.query(models.Meeting).filter(models.Meeting.host_id == user_id).delete()
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully", "id": user_id}
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(user_id: int, payload: schemas.AdminResetPassword, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.hashed_password = auth.get_password_hash(payload.new_password)
+    db.commit()
+    return {"message": "Password reset successfully", "user_id": user_id}
+
+@app.get("/api/user/profile", response_model=schemas.UserProfileResponse)
+def get_user_profile(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    pmr = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id, models.Meeting.is_pmr == True).first()
+    total_meetings = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id).count()
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "status": current_user.status,
+        "pmr_room_id": pmr.room_id if pmr else None,
+        "total_meetings": total_meetings
+    }
+
+@app.post("/api/user/profile", response_model=schemas.UserProfileResponse)
+def update_user_profile(payload: schemas.UserProfileUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if payload.name and payload.name.strip():
+        current_user.name = payload.name.strip()
+    
+    if payload.new_password:
+        if not payload.current_password:
+            raise HTTPException(status_code=400, detail="Current password is required to set a new password")
+        if not auth.verify_password(payload.current_password, current_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        if len(payload.new_password) < 6:
+            raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+        current_user.hashed_password = auth.get_password_hash(payload.new_password)
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    pmr = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id, models.Meeting.is_pmr == True).first()
+    total_meetings = db.query(models.Meeting).filter(models.Meeting.host_id == current_user.id).count()
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "status": current_user.status,
+        "pmr_room_id": pmr.room_id if pmr else None,
+        "total_meetings": total_meetings
+    }
+
 @app.get("/api/admin/settings", response_model=schemas.SystemSettingsResponse)
 def get_settings(current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
     settings = db.query(models.SystemSettings).first()

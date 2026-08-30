@@ -17,6 +17,26 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+class AdminResetPassword(BaseModel):
+    new_password: str
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
+class UserProfileResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    status: str
+    pmr_room_id: Optional[str] = None
+    total_meetings: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
 
 class MeetingBase(BaseModel):
     title: str
