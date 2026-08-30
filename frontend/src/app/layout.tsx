@@ -1,15 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import PwaRegister from "./PwaRegister";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport: Viewport = {
+  themeColor: "#0b0f19",
+};
+
 export const metadata: Metadata = {
   title: "Minizoom - Premium Video Conferencing",
   description: "Seamless, high-quality, ultra low-latency video meetings.",
   manifest: "/manifest.json",
-  themeColor: "#020617",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
