@@ -10,6 +10,7 @@ import {
   Zap,
   Smile,
 } from 'lucide-react';
+import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 
 export default function Home() {
   return (
@@ -26,7 +27,7 @@ export default function Home() {
             </div>
             <span>Minizoom</span>
             <span className="px-2 py-0.5 text-[10px] font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 rounded-md">
-              v1.4.0
+              v{APP_VERSION}
             </span>
           </div>
 
@@ -54,7 +55,7 @@ export default function Home() {
           <div className="max-w-2xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Minizoom v1.5.0 Suite</span>
+              <span>Minizoom v{APP_VERSION} Enterprise (Build {BUILD_DATE})</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] text-white">
@@ -108,7 +109,7 @@ export default function Home() {
                   <div className="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400">Minizoom Room • v1.4.0</span>
+                <span className="text-[11px] font-mono text-slate-400">Minizoom Room • v{APP_VERSION}</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               </div>
 

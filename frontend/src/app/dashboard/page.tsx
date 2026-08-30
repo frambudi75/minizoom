@@ -25,6 +25,7 @@ import {
   X,
   AlertTriangle
 } from 'lucide-react';
+import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -375,7 +376,7 @@ export default function Dashboard() {
             <span className="font-bold text-base tracking-tight text-white">Minizoom</span>
           </div>
           <span className="px-2 py-0.5 text-[10px] font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700 rounded">
-            {systemInfo?.app_version ? `v${systemInfo.app_version}` : 'v1.4.0'}
+            {systemInfo?.app_version ? `v${systemInfo.app_version}` : `v${APP_VERSION}`}
           </span>
         </div>
 
@@ -1034,7 +1035,7 @@ export default function Dashboard() {
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
                       <p className="text-slate-400">Application Version</p>
                       <p className="text-xs font-bold text-slate-100 mt-0.5 font-mono">
-                        v{systemInfo?.app_version || '1.4.0'} ({systemInfo?.build_date || '2026-08-29'})
+                        v{systemInfo?.app_version || APP_VERSION} ({systemInfo?.build_date || BUILD_DATE})
                       </p>
                     </div>
 

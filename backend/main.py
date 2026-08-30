@@ -17,7 +17,7 @@ run_migrations()
 app = FastAPI(title="Minizoom API", version="1.5.0")
 
 APP_VERSION = "1.5.0"
-BUILD_DATE = "2026-08-29"
+BUILD_DATE = "2026-08-30"
 
 @app.get("/api/system/status")
 def get_system_status():

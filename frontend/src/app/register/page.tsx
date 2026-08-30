@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Video, ArrowRight, Mail, Lock, User } from 'lucide-react';
+import { APP_VERSION } from '@/lib/version';
 
 export default function Register() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function Register() {
             </div>
             <span className="text-sm font-bold tracking-tight text-white">Minizoom</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-              Registration
+              v{APP_VERSION}
             </span>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
