@@ -1,5 +1,7 @@
-// Minizoom Bulletproof PWA Service Worker v1.5.0
+// Minizoom PWA Service Worker v1.5.0
 const CACHE_NAME = 'minizoom-cache-v1.5.0';
+
+// Only cache static icons and manifest - NEVER cache HTML pages
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icon-192.png',
@@ -8,10 +10,9 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
 });
 
@@ -21,6 +22,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purging old cache:', key);
             return caches.delete(key);
           }
         })
@@ -30,51 +32,45 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Hanya proses request GET dari origin yang sama (bukan chrome-extension / third-party)
+  // Never intercept non-GET or cross-origin requests
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   const url = new URL(event.request.url);
 
-  // BYPASS: Jangan intercept API, livekit signaling, atau dynamic routes
-  if (url.pathname.startsWith('/api/') || url.pathname.includes('livekit')) {
-    return;
+  // NEVER intercept HTML pages, API, LiveKit signaling, or Next.js dynamic routes
+  if (
+    event.request.mode === 'navigate' ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.includes('livekit') ||
+    url.pathname === '/' ||
+    url.pathname.startsWith('/room/') ||
+    url.pathname.startsWith('/dashboard') ||
+    url.pathname.startsWith('/login') ||
+    url.pathname.startsWith('/register')
+  ) {
+    return; // Pass through directly to network
   }
 
-  // Network-First with safe fallback
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // Cache hanya static assets yang sukses 200
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          networkResponse.type === 'basic' &&
-          (url.pathname.endsWith('.png') ||
-           url.pathname.endsWith('.ico') ||
-           url.pathname.endsWith('.json') ||
-           url.pathname.endsWith('.css') ||
-           url.pathname.endsWith('.js'))
-        ) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
+  // Cache static image assets only
+  if (
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.json')
+  ) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        return (
+          cached ||
+          fetch(event.request).then((response) => {
+            if (response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return response;
+          })
+        );
       })
-      .catch(async () => {
-        const cached = await caches.match(event.request);
-        if (cached) return cached;
-        if (event.request.mode === 'navigate') {
-          const rootCached = await caches.match('/');
-          if (rootCached) return rootCached;
-        }
-        return new Response('Network error occurred', {
-          status: 503,
-          statusText: 'Service Unavailable',
-          headers: new Headers({ 'Content-Type': 'text/plain' })
-        });
-      })
-  );
+    );
+  }
 });

@@ -7,12 +7,13 @@ export default function PwaRegister() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => {
-    // Daftarkan Service Worker
+    // Daftarkan Service Worker dan periksa update
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
           console.log('[PWA] Service worker registered successfully:', reg.scope);
+          reg.update();
         })
         .catch((err) => {
           console.warn('[PWA] Service worker registration failed:', err);
