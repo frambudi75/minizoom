@@ -151,13 +151,32 @@ def get_pending_users(current_user: models.User = Depends(get_current_superadmin
     return users
 
 @app.post("/api/admin/users/approve/{user_id}", response_model=schemas.UserResponse)
-def approve_user(user_id: int, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
+def approve_user(
+    user_id: int, 
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(get_current_superadmin), 
+    db: Session = Depends(get_db)
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.status = "approved"
     db.commit()
     db.refresh(user)
+
+    # Dispatch approval notification email to user
+    settings = db.query(models.SystemSettings).first()
+    settings_dict = {}
+    if settings:
+        settings_dict = {
+            "smtp_server": settings.smtp_server,
+            "smtp_port": settings.smtp_port,
+            "smtp_username": settings.smtp_username,
+            "smtp_password": settings.smtp_password,
+            "smtp_from": settings.smtp_from,
+        }
+    background_tasks.add_task(email_service.send_user_approved_notification, user.email, user.name, settings_dict)
+
     return user
 
 @app.get("/api/admin/users/all", response_model=list[schemas.UserResponse])
