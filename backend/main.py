@@ -302,6 +302,60 @@ def update_settings(settings_in: schemas.SystemSettingsCreate, current_user: mod
     db.refresh(settings)
     return settings
 
+@app.post("/api/admin/settings/test-email")
+def test_email_settings(
+    settings_in: schemas.SystemSettingsCreate = None,
+    current_user: models.User = Depends(get_current_superadmin),
+    db: Session = Depends(get_db)
+):
+    config = {}
+    if settings_in and (settings_in.smtp_server or settings_in.smtp_username):
+        config = {
+            "smtp_server": settings_in.smtp_server,
+            "smtp_port": settings_in.smtp_port,
+            "smtp_username": settings_in.smtp_username,
+            "smtp_password": settings_in.smtp_password,
+            "smtp_from": settings_in.smtp_from,
+        }
+    else:
+        saved = db.query(models.SystemSettings).first()
+        if saved:
+            config = {
+                "smtp_server": saved.smtp_server,
+                "smtp_port": saved.smtp_port,
+                "smtp_username": saved.smtp_username,
+                "smtp_password": saved.smtp_password,
+                "smtp_from": saved.smtp_from,
+            }
+    
+    success, msg = email_service.send_test_email(current_user.email, config)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"success": True, "message": msg}
+
+@app.post("/api/admin/settings/test-discord")
+def test_discord_settings(
+    settings_in: schemas.SystemSettingsCreate = None,
+    current_user: models.User = Depends(get_current_superadmin),
+    db: Session = Depends(get_db)
+):
+    config = {}
+    if settings_in and settings_in.discord_webhook_url:
+        config = {
+            "discord_webhook_url": settings_in.discord_webhook_url
+        }
+    else:
+        saved = db.query(models.SystemSettings).first()
+        if saved:
+            config = {
+                "discord_webhook_url": saved.discord_webhook_url
+            }
+            
+    success, msg = discord_service.send_test_discord_notification(config)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"success": True, "message": msg}
+
 @app.get("/api/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user

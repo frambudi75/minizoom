@@ -22,6 +22,7 @@ import {
   Copy,
   Lock,
   Mail,
+  Send,
   X,
   AlertTriangle
 } from 'lucide-react';
@@ -50,6 +51,9 @@ export default function Dashboard() {
     discord_webhook_url: '',
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testingDiscord, setTestingDiscord] = useState(false);
+  const [settingsFeedback, setSettingsFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [systemInfo, setSystemInfo] = useState<any>(null);
 
   // Reset Password Modal (for Admin)
@@ -262,14 +266,61 @@ export default function Dashboard() {
   const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSettings(true);
+    setSettingsFeedback(null);
     const token = localStorage.getItem('token');
-    await fetch('/api/admin/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(settings),
-    });
-    setSavingSettings(false);
-    alert('Settings saved successfully!');
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error('Failed to save settings');
+      setSettingsFeedback({ type: 'success', text: 'System settings saved successfully!' });
+    } catch (err: any) {
+      setSettingsFeedback({ type: 'error', text: err.message });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const testEmail = async () => {
+    setTestingEmail(true);
+    setSettingsFeedback(null);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch('/api/admin/settings/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to send test email');
+      setSettingsFeedback({ type: 'success', text: `Email Test: ${data.message}` });
+    } catch (err: any) {
+      setSettingsFeedback({ type: 'error', text: `Email Test: ${err.message}` });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
+  const testDiscord = async () => {
+    setTestingDiscord(true);
+    setSettingsFeedback(null);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch('/api/admin/settings/test-discord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to send test Discord notification');
+      setSettingsFeedback({ type: 'success', text: `Discord Test: ${data.message}` });
+    } catch (err: any) {
+      setSettingsFeedback({ type: 'error', text: `Discord Test: ${err.message}` });
+    } finally {
+      setTestingDiscord(false);
+    }
   };
 
   const createInstantMeeting = async () => {
@@ -1071,30 +1122,61 @@ export default function Dashboard() {
 
                 {/* Settings Form */}
                 <form onSubmit={saveSettings} className="space-y-4">
+                  {/* Feedback Banner */}
+                  {settingsFeedback && (
+                    <div
+                      className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2.5 border ${
+                        settingsFeedback.type === 'success'
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                          : 'bg-red-500/15 text-red-300 border-red-500/30'
+                      }`}
+                    >
+                      {settingsFeedback.type === 'success' ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                      )}
+                      <span>{settingsFeedback.text}</span>
+                    </div>
+                  )}
+
                   {/* SMTP Card */}
                   <div className="clean-card p-5 rounded-2xl space-y-4">
-                    <h2 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2.5">
-                      Email Notifications (SMTP)
-                    </h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-200">Email Notifications (SMTP)</h2>
+                        <p className="text-[11px] text-slate-400">Support Port 465 (SSL) & Port 587/25 (STARTTLS)</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={testEmail}
+                        disabled={testingEmail}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-300 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 active:scale-95 self-start sm:self-auto"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        {testingEmail ? 'Sending Test...' : 'Test SMTP Email'}
+                      </button>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                       <div className="space-y-1">
                         <label className="font-semibold text-slate-300 ml-1">SMTP Server</label>
                         <input
                           type="text"
                           className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
-                          placeholder="smtp.example.com"
+                          placeholder="mail.example.com"
                           value={settings.smtp_server}
                           onChange={(e) => setSettings({ ...settings, smtp_server: e.target.value })}
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-semibold text-slate-300 ml-1">SMTP Port</label>
+                        <label className="font-semibold text-slate-300 ml-1">SMTP Port (465 = SSL, 587 = TLS)</label>
                         <input
                           type="number"
                           className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-100"
-                          placeholder="587"
+                          placeholder="465"
                           value={settings.smtp_port}
-                          onChange={(e) => setSettings({ ...settings, smtp_port: parseInt(e.target.value) || 587 })}
+                          onChange={(e) => setSettings({ ...settings, smtp_port: parseInt(e.target.value) || 465 })}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1132,9 +1214,22 @@ export default function Dashboard() {
 
                   {/* Discord Card */}
                   <div className="clean-card p-5 rounded-2xl space-y-3">
-                    <h2 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2.5">
-                      Discord Integration
-                    </h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-200">Discord Integration</h2>
+                        <p className="text-[11px] text-slate-400">Receive new user registrations in your Discord channel</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={testDiscord}
+                        disabled={testingDiscord}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-300 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 active:scale-95 self-start sm:self-auto"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        {testingDiscord ? 'Sending...' : 'Test Discord Webhook'}
+                      </button>
+                    </div>
+
                     <div className="space-y-1 text-xs">
                       <label className="font-semibold text-slate-300 ml-1">Webhook URL</label>
                       <input
@@ -1152,7 +1247,7 @@ export default function Dashboard() {
                     disabled={savingSettings}
                     className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm active:scale-95"
                   >
-                    {savingSettings ? 'Saving...' : 'Save Settings'}
+                    {savingSettings ? 'Saving Settings...' : 'Save Settings'}
                   </button>
                 </form>
               </div>
