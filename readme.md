@@ -2,14 +2,14 @@
 
 # 📹 Minizoom
 
-### **Self-Hosted, Ultra-Lightweight & Enterprise Video Conferencing**
+### **Self-Hosted, Ultra-Lightweight & Enterprise Video Conferencing Platform**
 
-*Production-ready video meetings with zero bloat, low-latency WebRTC SFU, interactive whiteboards, and centralized access control.*
+*Production-ready video meetings with low-latency WebRTC SFU, Discord & SMTP smart notifications, governance approval workflows, and centralized user management.*
 
 <br/>
 
 [![Live Demo](https://img.shields.io/badge/LIVE%20DEMO-zoom.minirack.my.id-2563EB?style=for-the-badge&logo=google-chrome&logoColor=white)](https://zoom.minirack.my.id/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![LiveKit](https://img.shields.io/badge/LiveKit-WebRTC%20SFU-blue?style=for-the-badge&logo=webrtc&logoColor=white)](https://livekit.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -18,43 +18,53 @@
 
 <br/>
 
-[✨ Features](#-key-features) • [📸 Screenshots](#-product-showcase) • [🏛️ Architecture](#-system-architecture) • [🚀 Quick Start](#-quick-start-docker) • [📚 Docs](#-documentation-suite)
+[✨ Features](#-key-features) • [🔔 Smart Notifications](#-smart-real-time-notifications) • [🛡️ Governance](#-enterprise-governance--user-lifecycle) • [🏛️ Architecture](#-system-architecture) • [🚀 Quick Start](#-quick-start-docker) • [📚 Docs](#-documentation-suite)
 
 </div>
 
 ---
 
-## 📸 Product Showcase
+## 💡 Beyond Just Video: An Operational Platform
 
-<div align="center">
+At first glance, Minizoom delivers a crisp, responsive video meeting interface. But under the hood, it is designed as a **complete self-hosted operational collaboration platform**:
 
-### 🖥️ 1. Meeting Room & Live Conference
-*High-definition video grid, host moderation controls, real-time recorder, and live participant counter.*
+```
+[ New Registration ] ──► [ Discord Webhook Alert ] ──► [ Admin Approval ] ──► [ User Welcome Email ]
+                                                                                   │
+[ In-Meeting Controls ] ◄── [ Role Delegation & PMR ] ◄── [ JWT Auth Pipeline ] ◄──┘
+```
 
-![Minizoom Meeting Room](docs/screenshots/meeting_room.png)
+- **Enterprise Governance**: Superadmin approval workflows, role delegation, and user lifecycle controls.
+- **Smart Push Alerts**: Discord Webhooks and SMTP emails keep administrators updated without constantly monitoring the dashboard.
+- **Modern WebRTC SFU**: LiveKit SFU engine with Pre-Join Lobby device testing, adaptive low-data optimizer, and client-side screen recording.
 
-<br/>
+---
 
-### 📊 2. Modern Dashboard & Scheduled Meetings
-*Overview hub for instant room generation, recurring PMR links, and real-time meeting attendee counters.*
+## 🔔 Smart Real-Time Notifications
 
-![Minizoom Dashboard](docs/screenshots/dashboard.png)
+Minizoom provides background notification services that bridge your video platform directly to your team's operational tools:
 
-<br/>
+### 1. 👾 Discord Webhooks
+Receive instant rich embeds in your Discord channels whenever important platform events occur:
+- **New User Registrations**: Displays the user's name and email with an alert that approval is required.
+- **Diagnostic Test Events**: 1-click test button from the dashboard to verify webhook endpoints instantly.
 
-### 🛡️ 3. Centralized User Management & Superadmin Approval
-*Role-based access control with single-click user approvals, role promotions, and system health status.*
+### 2. 📧 Automated SMTP Email Pipeline
+Built-in email dispatch supporting **Port 465 (Implicit SSL)** and **Port 587 / 25 (STARTTLS)**:
+- **Superadmin Registration Alerts**: Notifies administrators when a new user registers.
+- **User Approval Confirmation**: Automatically sends newly approved users a welcome email with a direct 1-click login button.
+- **In-App SMTP Testing**: Integrated test email feature with detailed error diagnostics right in the Settings UI.
 
-![Minizoom Admin Panel](docs/screenshots/admin_panel.png)
+---
 
-<br/>
+## 🛡️ Enterprise Governance & User Lifecycle
 
-### 🔐 4. Account Registration & Auth Pipeline
-*Clean, glassmorphic authentication flow with automated superadmin bootstrap.*
-
-![Minizoom Auth](docs/screenshots/auth_login.png)
-
-</div>
+- **Bootstrap Superadmin**: The very first registered account automatically claims Superadmin privileges.
+- **Registration Approval Flow**: Subsequent accounts remain in `pending` status until reviewed by a Superadmin.
+- **Role Delegation**: Promote regular users to administrators or demote them on-the-fly.
+- **Admin Password Reset**: Superadmins can securely reset passwords for any user directly from the User Management table.
+- **Safe Cascading Deletion**: Deleting a user account automatically purges their associated meeting history and persistent PMR rooms.
+- **Dedicated "My Profile" Tab**: Self-service profile updates, secure personal password changes, and 1-click Personal Meeting Room (PMR) link sharing.
 
 ---
 
@@ -78,14 +88,14 @@
            ┌──────────────────┐                      ┌──────────────────┐
            │ Next.js Frontend │                      │ FastAPI Backend  │
            │  (App Router)    │                      │  (ASGI / uvloop) │
-           └─────────┬────────┘                      └─────────┬────────┘
-                     │                                         │
-                     │ (MediaStream WebRTC & Data Channel)     │ (JWT Token Generation & API)
-                     ▼                                         ▼
-           ┌──────────────────┐                      ┌──────────────────┐
-           │   LiveKit SFU    │                      │   Database       │
-           │  (Cloud / Host)  │                      │ (SQLite WAL Mode)│
-           └──────────────────┘                      └──────────────────┘
+           └─────────┬────────┘                      └────┬────────┬────┘
+                     │                                    │        │
+                     │ (MediaStream WebRTC)    (SMTP/SSL) │        │ (Webhooks)
+                     ▼                                    ▼        ▼
+           ┌──────────────────┐                      ┌────────┐ ┌─────────┐
+           │   LiveKit SFU    │                      │  SMTP  │ │ Discord │
+           │  (Cloud / Host)  │                      │ Server │ │ Webhook │
+           └──────────────────┘                      └────────┘ └─────────┘
 ```
 
 ---
@@ -95,27 +105,24 @@
 | Feature | Description |
 | :--- | :--- |
 | **⚡ LiveKit WebRTC SFU** | Ultra low-latency (<200ms) video & Opus audio streaming with adaptive simulcast. |
-| **🎭 Pre-Join Lobby** | Live camera preview, device toggles, and real-time microphone decibel volume meter. |
-| **🎨 Interactive Whiteboard** | Real-time collaborative canvas with pens, highlighters, erasers, and PNG export. |
-| **📊 Live Polls & Voting** | Instant participant voting with animated percentage progress bars. |
-| **📝 Shared Notes** | Real-time collaborative meeting minutes with 1-click `.txt` file export. |
-| **🛡️ Host Moderation** | Complete host controls: **Mute All**, mute individual, disable camera, and kick participants. |
-| **🔒 Room Locking** | Secure meetings on-the-fly; unauthorized guests are blocked at the API gateway. |
+| **🎭 Pre-Join Lobby** | Live camera preview, microphone input device picker, and real-time audio volume visualizer. |
+| **🔔 Smart Notifications** | Automated Discord Webhooks and multi-port SMTP email notifications (Port 465 SSL & 587 TLS). |
+| **🛡️ Admin Moderation** | Complete host controls: **Mute All**, disable participant video, lock room, and kick participants. |
+| **🔗 Personal Meeting Room (PMR)** | Static permanent meeting link assigned per user for recurring ad-hoc meetings. |
+| **📶 Adaptive Low-Data Mode** | Dynamic bitrate throttle for constrained cellular networks and poor connections. |
 | **🎬 Meeting Recorder** | Client-side mixed audio & video screen capture downloaded directly as `.webm`. |
-| **🔗 Personal Meeting Room (PMR)** | Static permanent link assigned per user for recurring ad-hoc meetings. |
-| **📶 Low-Data Mode** | Dynamic resolution and bitrate throttle for constrained cellular network environments. |
-| **🔔 Web Audio Chimes** | Built-in join/leave and chat sound effects powered by browser Web Audio synthesizer. |
-| **📲 PWA Support** | Fully installable as a standalone app on Android, iOS Safari, and Desktop PC. |
-| **👥 Centralized RBAC** | User approval workflow with automated SMTP email alerts and Discord webhooks. |
+| **🎨 Floating Emoji Reactions** | Real-time emoji reaction animations (👍, ❤️, 👏, 😂, 🎉, 🔥, 🚀) via WebRTC Data Channels. |
+| **📲 Progressive Web App (PWA)** | Installable native app experience on Android, iOS Safari, and Desktop PC. |
+| **👥 Centralized RBAC** | User approval workflow, password reset modal, cascading deletion, and profile manager. |
 
 ---
 
-## 💾 Database & Production Concurrency
+## 💾 Database & Concurrency Architecture
 
-- **SQLite WAL Mode (Default)**: Preconfigured with `PRAGMA journal_mode=WAL` and `StaticPool` connection sharing.
-  - *Why it's fast*: Database queries only execute during initial authentication and token signing. Active meeting media flows entirely in-memory through the WebRTC SFU with **zero database load during conferences**.
-  - *Capacity*: Designed for small to medium-sized organizations, targeting **up to 50 concurrent participants** per room depending on server CPU, network NIC bandwidth, and SFU allocation.
-- **Enterprise Multi-Node Scaling**: Switch seamlessly to **PostgreSQL** by updating the `DATABASE_URL` in `.env` without changing any application code.
+- **SQLite WAL Mode (Default)**: Preconfigured with `PRAGMA journal_mode=WAL` and `/app/data` Docker volume persistence.
+  - *Zero Video Load*: Database queries only execute during initial authentication and token signing. Active meeting media flows entirely in-memory through the WebRTC SFU.
+  - *Capacity*: Handles **up to 50 concurrent participants** per room with minimal CPU and memory footprints (<1GB RAM).
+- **Multi-Node PostgreSQL Support**: Switch seamlessly to **PostgreSQL** by updating the `DATABASE_URL` in `.env` without altering application code.
 
 ---
 
@@ -143,19 +150,20 @@ LIVEKIT_API_SECRET=your_api_secret
 
 ### 3. Build & Run
 ```bash
-sudo docker compose up -d --build
+docker compose up -d --build
 ```
 
-Access Minizoom at `http://localhost:3000` (or your domain).
+Access Minizoom at `http://localhost:3000` (or your reverse proxy domain).
 
 ---
 
 ## 📚 Documentation Suite
 
-- 🏛️ [System Architecture](docs/ARCHITECTURE.md) - Deep architectural breakdown, data flow, and token lifecycle.
+- 🏛️ [System Architecture](docs/ARCHITECTURE.md) - Architectural breakdown, data flow, and token lifecycle.
 - 🚀 [Production Deployment](docs/DEPLOYMENT.md) - Nginx reverse proxy configuration, SSL Certbot, and port forwarding.
 - 🛡️ [Security Architecture](docs/SECURITY.md) - RBAC policies, JWT signing, and room privacy models.
 - 🔧 [Troubleshooting Guide](docs/TROUBLESHOOTING.md) - Diagnostics for media permissions, network ICE, and Docker caches.
+- 📝 [Release Changelog](docs/CHANGELOG.md) - Full version release history from v1.0.0 to v1.5.0.
 
 ---
 
