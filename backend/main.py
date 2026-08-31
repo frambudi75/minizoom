@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import timedelta
 import models, schemas, auth
 from database import engine, get_db, run_migrations
@@ -71,10 +72,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-        token_data = schemas.TokenData(email=email)
+        token_data = schemas.TokenData(email=email.strip().lower())
     except auth.InvalidTokenError:
         raise credentials_exception
-    user = db.query(models.User).filter(models.User.email == token_data.email).first()
+    user = db.query(models.User).filter(func.lower(models.User.email) == token_data.email).first()
     if user is None:
         raise credentials_exception
     return user
@@ -91,16 +92,19 @@ def get_current_superadmin(current_user: models.User = Depends(get_current_activ
 
 @app.post("/api/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    clean_email = user.email.strip().lower()
+    clean_name = user.name.strip()
+
+    db_user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed_password = auth.get_password_hash(user.password)
     # Auto-approve and make superadmin ONLY if it's the very first user in the system
     if db.query(models.User).count() == 0:
-        db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password, role="superadmin", status="approved")
+        db_user = models.User(name=clean_name, email=clean_email, hashed_password=hashed_password, role="superadmin", status="approved")
     else:
-        db_user = models.User(name=user.name, email=user.email, hashed_password=hashed_password, role="user", status="pending")
+        db_user = models.User(name=clean_name, email=clean_email, hashed_password=hashed_password, role="user", status="pending")
     
     db.add(db_user)
     db.commit()
@@ -124,20 +128,22 @@ def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Se
         admins = db.query(models.User).filter(models.User.role == "superadmin").all()
         admin_emails = [admin.email for admin in admins]
         if admin_emails:
-            background_tasks.add_task(email_service.send_new_user_notification, admin_emails, user.name, user.email, settings_dict)
+            background_tasks.add_task(email_service.send_new_user_notification, admin_emails, clean_name, clean_email, settings_dict)
             
         # Discord Notification
-        background_tasks.add_task(discord_service.send_discord_notification, user.name, user.email, settings_dict)
+        background_tasks.add_task(discord_service.send_discord_notification, clean_name, clean_email, settings_dict)
 
     return db_user
 
 @app.post("/api/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+    clean_email = form_data.username.strip().lower()
+    user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
+    
+    if not user or not (auth.verify_password(form_data.password, user.hashed_password) or auth.verify_password(form_data.password.strip(), user.hashed_password)):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     if user.status != "approved":
-        raise HTTPException(status_code=400, detail="Account pending approval")
+        raise HTTPException(status_code=400, detail="Account pending approval from Administrator")
     
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(

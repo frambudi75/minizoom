@@ -16,8 +16,9 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
+      const cleanEmail = formData.email.trim().toLowerCase();
       const form = new URLSearchParams();
-      form.append('username', formData.email);
+      form.append('username', cleanEmail);
       form.append('password', formData.password);
 
       const res = await fetch('/api/login', {

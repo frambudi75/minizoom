@@ -19,7 +19,11 @@ export default function Register() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Pendaftaran gagal');
