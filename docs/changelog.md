@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-10-28
+
+### Added
+- **Pre-Join Lobby Camera & Microphone Picker**: Added live hardware device enumeration (`navigator.mediaDevices.enumerateDevices()`) with real-time camera & microphone selection dropdowns before entering a meeting.
+- **Interactive Whiteboard Touch & Late-Joiner Sync**:
+  - Full mobile/tablet touch drawing support (`onTouchStart`, `onTouchMove`, `onTouchEnd` with `touch-none`).
+  - Persistent stroke history across modal open/close and window resizing.
+  - Automatic `wb_sync` broadcast when new participants join an active room.
+  - Confirmation prompt for non-host participants before clearing the shared canvas.
+- **Late-Joiner State Synchronization (`state_sync`)**: Hosts automatically broadcast active **Live Polls** and **Shared Meeting Notes** to newly connected participants via WebRTC DataChannel.
+- **API Rate Limiting**: Added IP-based in-memory rate limiting on `/api/login` (10 req/min), `/api/register` (5 req/5 min), and `/api/meetings/{room_id}/guest` (20 req/min) to prevent brute-force attacks and notification spam.
+- **Dual Database Engine Support**: Enhanced `backend/database.py` to automatically switch between SQLite WAL (`StaticPool`) and PostgreSQL/MySQL connection pooling (`pool_pre_ping`) based on `DATABASE_URL`.
+- **Comprehensive Engineering Documentation Suite**: Added `docs/AFD.md`, `docs/BDS.md`, `docs/DBD.md`, `docs/IPD.md`, `docs/TRD.md`, and `docs/rules.md`.
+
+### Changed
+- **Modularized Room Frontend Architecture**: Extracted monolithic `frontend/src/app/room/[id]/page.tsx` into modular components under `frontend/src/components/room/` (`PreJoinLobby`, `WhiteboardModal`, `ParticipantSidebar`, `ReactionOverlay`, `RoomHeader`, `SoundSynthesizer`).
+- **Dynamic Public URL in Emails**: Replaced hardcoded login links in approval emails with `APP_PUBLIC_URL` environment variable.
+
+### Security
+- **Email HTML Escaping**: Added `html.escape()` sanitization across all SMTP email templates in `backend/email_service.py` to prevent HTML injection.
+- **SMTP Password Masking**: Masked `smtp_password` as `"********"` in `GET /api/admin/settings` responses while preserving saved credentials when updating or testing SMTP settings.
+
+---
+
 ## [1.5.0] - 2026-08-30
 
 ### Added

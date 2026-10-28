@@ -1,9 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import timedelta
+from collections import defaultdict
+import time
 import models, schemas, auth
 from database import engine, get_db, run_migrations
 import os
@@ -15,10 +17,28 @@ import discord_service
 models.Base.metadata.create_all(bind=engine)
 run_migrations()
 
-app = FastAPI(title="Minizoom API", version="1.5.0")
+app = FastAPI(title="Minizoom API", version="1.6.0")
 
-APP_VERSION = "1.5.0"
-BUILD_DATE = "2026-08-30"
+APP_VERSION = "1.6.0"
+BUILD_DATE = "2026-10-28"
+
+# ================= Lightweight In-Memory Rate Limiter =================
+_rate_limit_buckets: dict[str, list[float]] = defaultdict(list)
+
+def check_rate_limit(request: Request, action: str, max_requests: int, window_seconds: int):
+    forwarded = request.headers.get("x-forwarded-for")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
+    key = f"{action}:{client_ip}"
+    now = time.monotonic()
+    timestamps = [t for t in _rate_limit_buckets[key] if now - t < window_seconds]
+    if len(timestamps) >= max_requests:
+        _rate_limit_buckets[key] = timestamps
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Terlalu banyak percobaan ({action}). Silakan tunggu sebentar lalu coba lagi."
+        )
+    timestamps.append(now)
+    _rate_limit_buckets[key] = timestamps
 
 @app.get("/api/system/status")
 def get_system_status():
@@ -91,7 +111,8 @@ def get_current_superadmin(current_user: models.User = Depends(get_current_activ
     return current_user
 
 @app.post("/api/register", response_model=schemas.UserResponse)
-def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def register(request: Request, user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    check_rate_limit(request, "register", max_requests=5, window_seconds=300)
     clean_email = user.email.strip().lower()
     clean_name = user.name.strip()
 
@@ -136,7 +157,8 @@ def register(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Se
     return db_user
 
 @app.post("/api/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    check_rate_limit(request, "login", max_requests=10, window_seconds=60)
     clean_email = form_data.username.strip().lower()
     user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
     
@@ -274,6 +296,19 @@ def update_user_profile(payload: schemas.UserProfileUpdate, current_user: models
         "total_meetings": total_meetings
     }
 
+SMTP_PASSWORD_MASK = "********"
+
+def _mask_settings_response(settings: models.SystemSettings) -> dict:
+    return {
+        "id": settings.id,
+        "smtp_server": settings.smtp_server or "",
+        "smtp_port": settings.smtp_port or 587,
+        "smtp_username": settings.smtp_username or "",
+        "smtp_password": SMTP_PASSWORD_MASK if settings.smtp_password else "",
+        "smtp_from": settings.smtp_from or "noreply@minizoom.local",
+        "discord_webhook_url": settings.discord_webhook_url or "",
+    }
+
 @app.get("/api/admin/settings", response_model=schemas.SystemSettingsResponse)
 def get_settings(current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
     settings = db.query(models.SystemSettings).first()
@@ -282,7 +317,7 @@ def get_settings(current_user: models.User = Depends(get_current_superadmin), db
         db.add(settings)
         db.commit()
         db.refresh(settings)
-    return settings
+    return _mask_settings_response(settings)
 
 @app.post("/api/admin/settings", response_model=schemas.SystemSettingsResponse)
 def update_settings(settings_in: schemas.SystemSettingsCreate, current_user: models.User = Depends(get_current_superadmin), db: Session = Depends(get_db)):
@@ -294,13 +329,14 @@ def update_settings(settings_in: schemas.SystemSettingsCreate, current_user: mod
     settings.smtp_server = settings_in.smtp_server
     settings.smtp_port = settings_in.smtp_port
     settings.smtp_username = settings_in.smtp_username
-    settings.smtp_password = settings_in.smtp_password
+    if settings_in.smtp_password is not None and settings_in.smtp_password != SMTP_PASSWORD_MASK:
+        settings.smtp_password = settings_in.smtp_password
     settings.smtp_from = settings_in.smtp_from
     settings.discord_webhook_url = settings_in.discord_webhook_url
 
     db.commit()
     db.refresh(settings)
-    return settings
+    return _mask_settings_response(settings)
 
 @app.post("/api/admin/settings/test-email")
 def test_email_settings(
@@ -308,25 +344,27 @@ def test_email_settings(
     current_user: models.User = Depends(get_current_superadmin),
     db: Session = Depends(get_db)
 ):
+    saved = db.query(models.SystemSettings).first()
     config = {}
     if settings_in and (settings_in.smtp_server or settings_in.smtp_username):
+        raw_pass = settings_in.smtp_password
+        if raw_pass == SMTP_PASSWORD_MASK and saved:
+            raw_pass = saved.smtp_password
         config = {
             "smtp_server": settings_in.smtp_server,
             "smtp_port": settings_in.smtp_port,
             "smtp_username": settings_in.smtp_username,
-            "smtp_password": settings_in.smtp_password,
+            "smtp_password": raw_pass,
             "smtp_from": settings_in.smtp_from,
         }
-    else:
-        saved = db.query(models.SystemSettings).first()
-        if saved:
-            config = {
-                "smtp_server": saved.smtp_server,
-                "smtp_port": saved.smtp_port,
-                "smtp_username": saved.smtp_username,
-                "smtp_password": saved.smtp_password,
-                "smtp_from": saved.smtp_from,
-            }
+    elif saved:
+        config = {
+            "smtp_server": saved.smtp_server,
+            "smtp_port": saved.smtp_port,
+            "smtp_username": saved.smtp_username,
+            "smtp_password": saved.smtp_password,
+            "smtp_from": saved.smtp_from,
+        }
     
     success, msg = email_service.send_test_email(current_user.email, config)
     if not success:
@@ -627,7 +665,8 @@ async def disable_video_participant(room_id: str, identity: str, current_user: m
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/meetings/{room_id}/guest")
-def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depends(get_db)):
+def get_guest_token(request: Request, room_id: str, guest: schemas.GuestJoin, db: Session = Depends(get_db)):
+    check_rate_limit(request, "guest_join", max_requests=20, window_seconds=60)
     meeting = db.query(models.Meeting).filter(models.Meeting.room_id == room_id).first()
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
@@ -654,4 +693,3 @@ def get_guest_token(room_id: str, guest: schemas.GuestJoin, db: Session = Depend
         "server_url": get_livekit_ws_url(),
         "is_locked": bool(meeting.is_locked)
     }
-

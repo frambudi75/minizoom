@@ -1,4 +1,4 @@
-# OS & Zips
+# OS & Archives
 *.zip
 .DS_Store
 Thumbs.db
@@ -18,13 +18,16 @@ data/
 .env.local
 .env.production
 
-# Python cache
+# Python cache & virtual environments
 __pycache__/
 */__pycache__/
 *.pyc
 *.pyo
 *.pyd
 .pytest_cache/
+backend/venv/
+venv/
+.venv/
 
 # Node / Next.js
 frontend/node_modules/

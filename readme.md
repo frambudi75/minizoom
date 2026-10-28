@@ -159,11 +159,17 @@ Access Minizoom at `http://localhost:3000` (or your reverse proxy domain).
 
 ## 📚 Documentation Suite
 
-- 🏛️ [System Architecture](docs/ARCHITECTURE.md) - Architectural breakdown, data flow, and token lifecycle.
-- 🚀 [Production Deployment](docs/DEPLOYMENT.md) - Nginx reverse proxy configuration, SSL Certbot, and port forwarding.
-- 🛡️ [Security Architecture](docs/SECURITY.md) - RBAC policies, JWT signing, and room privacy models.
+- 🏛️ [System Architecture](docs/architecture.md) - Architectural breakdown, modular components, and token lifecycle.
+- 🔄 [Architecture & Flow Diagrams (AFD)](docs/AFD.md) - User registration, room join, and DataChannel sync flows.
+- ⚙️ [Backend Design Specification (BDS)](docs/BDS.md) - FastAPI modules, rate limiting, and credential masking.
+- 🗄️ [Database Design (DBD)](docs/DBD.md) - ERD schema, SQLite WAL vs PostgreSQL dual-engine setup.
+- 📋 [Technical Requirements (TRD)](docs/TRD.md) - WebRTC, Pre-Join Lobby, Whiteboard, and Recorder specs.
+- 🚢 [Implementation & Deployment Plan (IPD)](docs/IPD.md) - Project structure and verification steps.
+- 🚀 [Production Deployment](docs/deployment.md) - Nginx reverse proxy configuration, SSL Certbot, and port forwarding.
+- 🛡️ [Security Architecture](docs/SECURITY.md) - RBAC policies, rate limiting, HTML sanitization, and JWT signing.
+- 📏 [Coding & Operational Rules](docs/rules.md) - Engineering standards and security rules.
 - 🔧 [Troubleshooting Guide](docs/TROUBLESHOOTING.md) - Diagnostics for media permissions, network ICE, and Docker caches.
-- 📝 [Release Changelog](docs/CHANGELOG.md) - Full version release history from v1.0.0 to v1.5.0.
+- 📝 [Release Changelog](docs/changelog.md) - Full version release history from v1.0.0 to v1.6.0.
 
 ---
 

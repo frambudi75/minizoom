@@ -5,7 +5,9 @@ services:
     ports:
       - "8000:8000" # Aman dari port terlarang
     environment:
-      - DATABASE_URL=sqlite:///./data/minizoom.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/minizoom.db}
+      - SECRET_KEY=${SECRET_KEY:-super-secret-minizoom-key-change-this-later}
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-https://zoom.minirack.my.id}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - LIVEKIT_URL=${LIVEKIT_URL:-ws://localhost:7880}

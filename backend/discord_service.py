@@ -27,7 +27,7 @@ def send_test_discord_notification(config: dict = None) -> tuple[bool, str]:
                     },
                     {
                         "name": "Version",
-                        "value": "v1.5.0",
+                        "value": "v1.6.0",
                         "inline": True
                     }
                 ],

@@ -1,74 +1,128 @@
-# API Documentation (Minizoom Backend)
+# API Documentation (Minizoom Backend v1.6.0)
 
-The backend is built with **FastAPI**. All endpoints returning JSON responses. Authenticated endpoints require a JWT Bearer token in the `Authorization` header.
+The backend is built with **FastAPI**. All endpoints return JSON responses. Authenticated endpoints require a JWT Bearer token in the `Authorization: Bearer <token>` header.
 
-## Authentication & User Management
+---
+
+## 1. System & Health
+
+### `GET /api/system/status`
+- **Description**: Returns server health, application version (`1.6.0`), build date, LiveKit SFU mode, and enabled feature list.
+
+---
+
+## 2. Authentication & Profile Management
 
 ### `POST /api/register`
-- **Description**: Register a new user. The first user becomes superadmin.
-- **Body**: `name`, `email`, `password`
-- **Response**: User object. Triggers background notification emails/webhooks if the user is not the first superadmin.
+- **Rate Limit**: 5 requests per 5 minutes per IP.
+- **Description**: Register a new user. The very first registered user in an empty database is automatically approved as `superadmin`. Subsequent users are set to `pending` status and trigger background SMTP & Discord notifications.
+- **Body**: `{"name": "Budi", "email": "budi@example.com", "password": "..."}`
+- **Response**: `UserResponse` (`id`, `name`, `email`, `role`, `status`).
 
-### `POST /api/token`
-- **Description**: Login to receive JWT token.
-- **Body**: OAuth2 Password Request Form (`username`, `password`)
-- **Response**: `{"access_token": "...", "token_type": "bearer", "user": {...}}`
-- **Errors**: Returns 400 for incorrect credentials or if the account is still "pending".
+### `POST /api/login`
+- **Rate Limit**: 10 requests per 60 seconds per IP.
+- **Description**: Authenticate via OAuth2 form data (`username`, `password`) and receive a JWT access token.
+- **Response**: `{"access_token": "...", "token_type": "bearer"}`
+- **Errors**: `400` for invalid credentials or `pending` account approval; `429` if rate limit exceeded.
 
 ### `GET /api/me`
-- **Description**: Fetch current logged-in user details.
 - **Headers**: `Authorization: Bearer <token>`
-- **Response**: User object.
+- **Description**: Fetch current authenticated and approved user details.
 
-## Meeting Management
+### `GET /api/user/profile`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Returns profile details along with `pmr_room_id` and `total_meetings` hosted.
+
+### `POST /api/user/profile`
+- **Headers**: `Authorization: Bearer <token>`
+- **Body**: `{"name": "...", "current_password": "...", "new_password": "..."}`
+- **Description**: Update user display name and/or change password (requires verifying `current_password`).
+
+---
+
+## 3. Meeting & Room Management
 
 ### `GET /api/meetings`
-- **Description**: Get all meetings hosted by the current user.
 - **Headers**: `Authorization: Bearer <token>`
-- **Response**: List of Meeting objects.
+- **Description**: List meetings hosted by the current user (or all meetings if `superadmin`), enriched with real-time `active_participants` counts queried from LiveKit SFU.
 
-### `POST /api/meetings`
-- **Description**: Create an instant or scheduled meeting.
+### `POST /api/meetings/instant`
 - **Headers**: `Authorization: Bearer <token>`
-- **Body**: `title`, `scheduled_at` (optional)
-- **Response**: Meeting object (contains `room_id`).
+- **Description**: Create an active instant meeting with a unique UUID `room_id`.
 
-### `DELETE /api/meetings/{meeting_id}`
-- **Description**: Delete a meeting from history.
+### `POST /api/meetings/schedule`
 - **Headers**: `Authorization: Bearer <token>`
-- **Response**: `{"ok": true}`
+- **Body**: `{"title": "Weekly Sync", "scheduled_at": "2026-10-30T09:00:00Z"}`
+- **Description**: Schedule a future meeting room.
 
-## LiveKit SFU Integration
+### `GET /api/meetings/pmr`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Retrieve or auto-provision the user's permanent Personal Meeting Room (`pmr-{user_id}`).
 
-### `POST /api/meetings/{room_id}/join`
-- **Description**: Generate a LiveKit access token to join the WebRTC room.
-- **Body**: `participant_name`
-- **Response**: `{"token": "livekit_jwt_token"}`
-- *Note*: If the user is logged in and is the host, the token will include `roomAdmin: true` grants.
+### `DELETE /api/meetings/{room_id}`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Delete a meeting room (Host or Superadmin only).
+
+### `POST /api/meetings/{room_id}/lock`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Toggle room lock status (`is_locked`). When locked, guests and non-host users cannot request join tokens.
+
+---
+
+## 4. LiveKit SFU & In-Meeting Host Controls
+
+### `GET /api/meetings/{room_id}/token`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Generate a signed LiveKit JWT token for a logged-in user. Grants `room_admin=True` if the user is the room host or a superadmin.
+- **Response**: `{"token": "...", "server_url": "wss://...", "is_locked": false, "is_host": true}`
+
+### `POST /api/meetings/{room_id}/guest`
+- **Rate Limit**: 20 requests per 60 seconds per IP.
+- **Body**: `{"name": "Budi Santoso", "institution": "PT Maju Jaya"}`
+- **Description**: Generate a participant-scoped LiveKit JWT token for an unauthenticated guest (`guest_<hex>`). Rejects with `403` if the room is locked.
+
+### `POST /api/meetings/{room_id}/mute-all`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Remotely mutes all non-host audio tracks in the room via LiveKit Server API.
 
 ### `POST /api/meetings/{room_id}/mute/{identity}`
-### `POST /api/meetings/{room_id}/kick/{identity}`
 ### `POST /api/meetings/{room_id}/video-off/{identity}`
-- **Description**: Host controls executed via LiveKit Server API.
+### `POST /api/meetings/{room_id}/kick/{identity}`
 - **Headers**: `Authorization: Bearer <token>`
-- **Response**: `{"success": true}`
+- **Description**: Host moderation endpoints to mute a specific participant's microphone, turn off their camera track, or remove them from the room.
 
-## Superadmin Dashboard
+---
+
+## 5. Superadmin Governance & System Settings
 
 ### `GET /api/admin/users/pending`
-- **Description**: Get all users with "pending" status.
-
 ### `GET /api/admin/users/all`
-- **Description**: Get all registered users.
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Description**: List pending or all registered user accounts.
 
-### `POST /api/admin/users/{action}/{user_id}`
-- **Description**: Approve or Reject a user account. Action: `approve` or `reject`.
+### `POST /api/admin/users/approve/{user_id}`
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Description**: Approve a pending user account and dispatch a welcome email with a login link (`APP_PUBLIC_URL/login`).
 
-### `POST /api/admin/users/role/{user_id}?role={new_role}`
-- **Description**: Promote to admin or demote to user.
+### `POST /api/admin/users/role/{user_id}?role={user|superadmin}`
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Description**: Promote a user to `superadmin` or demote to `user`.
+
+### `POST /api/admin/users/{user_id}/reset-password`
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Body**: `{"new_password": "..."}`
+- **Description**: Force-reset a user's password.
+
+### `DELETE /api/admin/users/{user_id}`
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Description**: Permanently delete a user and cascade-delete all their hosted meetings.
 
 ### `GET /api/admin/settings`
-- **Description**: Fetch dynamic system settings (SMTP & Discord).
-
 ### `POST /api/admin/settings`
-- **Description**: Update dynamic system settings.
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Description**: Read or update SMTP and Discord Webhook settings. Note: `smtp_password` is masked as `"********"` in GET/POST responses to prevent plaintext credential exposure.
+
+### `POST /api/admin/settings/test-email`
+### `POST /api/admin/settings/test-discord`
+- **Headers**: `Authorization: Bearer <token>` (Superadmin only)
+- **Description**: Dispatch diagnostic test notifications to verify SMTP and Discord Webhook configurations.

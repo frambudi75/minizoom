@@ -1,4 +1,5 @@
 import os
+import html
 import smtplib
 import ssl
 from email.mime.text import MIMEText
@@ -9,6 +10,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "noreply@minizoom.local")
+APP_PUBLIC_URL = os.getenv("APP_PUBLIC_URL", "https://zoom.minirack.my.id").rstrip("/")
 
 def _get_smtp_client_params(config: dict = None):
     smtp_server = config.get("smtp_server") if config else None
@@ -83,18 +85,23 @@ def send_test_email(target_email: str, config: dict = None) -> tuple[bool, str]:
     if not target_email:
         return False, "Target recipient email is missing."
 
+    safe_host = html.escape(server_host)
+    safe_user = html.escape(username)
+    safe_sender = html.escape(sender)
+    safe_target = html.escape(target_email)
+
     subject = "🧪 [Minizoom] Test Email Notification"
-    html = f"""
+    html_body = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; padding: 24px; margin: 0;">
         <div style="max-width: 540px; margin: 0 auto; background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
           <h2 style="color: #60a5fa; margin-top: 0;">SMTP Test Successful! 🎉</h2>
           <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">This is a test email sent from your <strong>Minizoom Video Conferencing</strong> system.</p>
           <div style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #1e293b; margin: 16px 0; font-size: 13px;">
-            <p style="margin: 4px 0;"><strong>SMTP Server:</strong> {server_host}:{port}</p>
-            <p style="margin: 4px 0;"><strong>Username:</strong> {username}</p>
-            <p style="margin: 4px 0;"><strong>Sender (From):</strong> {sender}</p>
-            <p style="margin: 4px 0;"><strong>Recipient:</strong> {target_email}</p>
+            <p style="margin: 4px 0;"><strong>SMTP Server:</strong> {safe_host}:{port}</p>
+            <p style="margin: 4px 0;"><strong>Username:</strong> {safe_user}</p>
+            <p style="margin: 4px 0;"><strong>Sender (From):</strong> {safe_sender}</p>
+            <p style="margin: 4px 0;"><strong>Recipient:</strong> {safe_target}</p>
           </div>
           <p style="color: #34d399; font-size: 14px; font-weight: bold;">Your email notifications are working correctly!</p>
           <br>
@@ -108,7 +115,7 @@ def send_test_email(target_email: str, config: dict = None) -> tuple[bool, str]:
     msg["Subject"] = subject
     msg["From"] = f"Minizoom <{sender}>"
     msg["To"] = target_email
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(html_body, "html"))
 
     try:
         _connect_and_send(server_host, port, username, password, sender, [target_email], msg)
@@ -130,16 +137,19 @@ def send_new_user_notification(admin_emails: list, new_user_name: str, new_user_
     if not admin_emails:
         return
 
+    safe_name = html.escape(new_user_name)
+    safe_email = html.escape(new_user_email)
+
     subject = f"🔔 [Minizoom] New User Registration: {new_user_name}"
-    html = f"""
+    html_body = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; padding: 24px; margin: 0;">
         <div style="max-width: 540px; margin: 0 auto; background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
           <h2 style="color: #60a5fa; margin-top: 0;">Minizoom User Registration</h2>
           <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">A new user has registered and is pending your approval to access the workspace.</p>
           <div style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #1e293b; margin: 16px 0;">
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Full Name:</strong> {new_user_name}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> {new_user_email}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Full Name:</strong> {safe_name}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> {safe_email}</p>
           </div>
           <p style="color: #cbd5e1; font-size: 14px;">Log in to your Minizoom Dashboard to approve or reject this user.</p>
           <br>
@@ -153,7 +163,7 @@ def send_new_user_notification(admin_emails: list, new_user_name: str, new_user_
     msg["Subject"] = subject
     msg["From"] = f"Minizoom <{sender}>"
     msg["To"] = ", ".join(admin_emails)
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(html_body, "html"))
 
     try:
         _connect_and_send(server_host, port, username, password, sender, admin_emails, msg)
@@ -172,17 +182,20 @@ def send_user_approved_notification(user_email: str, user_name: str, config: dic
     if not user_email:
         return
 
+    safe_name = html.escape(user_name)
+    login_url = f"{APP_PUBLIC_URL}/login"
+
     subject = f"✅ [Minizoom] Your Account Has Been Approved!"
-    html = f"""
+    html_body = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #0b0f19; color: #e2e8f0; padding: 24px; margin: 0;">
         <div style="max-width: 540px; margin: 0 auto; background: #182234; border: 1px solid #334155; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
           <h2 style="color: #34d399; margin-top: 0;">Welcome to Minizoom!</h2>
-          <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">Hi <strong>{user_name}</strong>,</p>
+          <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">Hi <strong>{safe_name}</strong>,</p>
           <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">Great news! Your account registration has been reviewed and <strong>approved</strong> by the administrator. You can now sign in and start hosting video meetings.</p>
           
           <div style="margin: 24px 0; text-align: center;">
-            <a href="https://zoom.minirack.my.id/login" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 14px;">Sign In to Minizoom</a>
+            <a href="{login_url}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 14px;">Sign In to Minizoom</a>
           </div>
 
           <p style="color: #94a3b8; font-size: 13px;">If you have any questions or need assistance, feel free to contact your team administrator.</p>
@@ -197,7 +210,7 @@ def send_user_approved_notification(user_email: str, user_name: str, config: dic
     msg["Subject"] = subject
     msg["From"] = f"Minizoom <{sender}>"
     msg["To"] = user_email
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(html_body, "html"))
 
     try:
         _connect_and_send(server_host, port, username, password, sender, [user_email], msg)
